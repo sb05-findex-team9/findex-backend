@@ -5,7 +5,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.codeit.findex.indexData.service.IndexDataService;
 
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
 @RestController
