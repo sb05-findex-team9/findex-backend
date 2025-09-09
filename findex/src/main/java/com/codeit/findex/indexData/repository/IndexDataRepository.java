@@ -4,5 +4,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.codeit.findex.indexData.domain.IndexData;
 
-public interface IndexDataRepository extends JpaRepository<Long, IndexData> {
+public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 }

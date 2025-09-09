@@ -4,5 +4,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.codeit.findex.openApi.domain.AutoSyncConfig;
 
-public interface AutoSyncConfigRepository extends JpaRepository<Long, AutoSyncConfig> {
+public interface AutoSyncConfigRepository extends JpaRepository<AutoSyncConfig,Long> {
 }
