@@ -1,4 +1,4 @@
-package com.codeit.findex.config;
+package com.codeit.findex.common.config;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;

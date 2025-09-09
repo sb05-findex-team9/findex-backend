@@ -1,4 +1,4 @@
-package com.codeit.findex.exception;
+package com.codeit.findex.common.exception;
 
 import java.time.Instant;
 import java.util.HashMap;
