@@ -17,7 +17,7 @@ SELECT
     ROUND((500 + random()*2500)::numeric, 4)                                       AS base_index,
     'OPEN_API'                                                                     AS source_type,
     (random() < 0.2)                                                               AS favorite
-FROM generate_series(1,50) AS gs;
+FROM generate_series(1,100) AS gs;
 
 -- 2) auto_sync_configs 50개 (DEMO 인덱스에 대해 1:1)
 INSERT INTO auto_sync_configs (index_info_id, enabled)

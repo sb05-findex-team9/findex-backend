@@ -55,8 +55,9 @@ public class IndexInfo {
 	@Column(name = "base_index", precision = 18, scale = 4)
 	private BigDecimal baseIndex;
 
+	@Builder.Default
 	@Column(name = "source_type", length = 16)
-	private String sourceType;
+	private String sourceType = "user";
 
 	@Column(name = "favorite")
 	private Boolean favorite;
