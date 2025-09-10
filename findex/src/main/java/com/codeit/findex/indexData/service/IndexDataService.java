@@ -29,7 +29,6 @@ public class IndexDataService {
 			? Sort.Direction.DESC
 			: Sort.Direction.ASC;
 
-		// 정렬 필드 매핑 (API 스펙의 sortField를 entity 필드로 매핑)
 		String entitySortField = mapSortField(sortField);
 
 		Sort sort = Sort.by(direction, entitySortField);
@@ -40,7 +39,6 @@ public class IndexDataService {
 	}
 
 	private String mapSortField(String apiSortField) {
-		// API 스펙의 정렬 필드를 엔티티 필드로 매핑
 		switch (apiSortField) {
 			case "indexClassification":
 				return "indexInfo.indexClassification"; // Join 필드

@@ -38,7 +38,6 @@ public class IndexDataController {
 		@RequestParam(required = false, defaultValue = "asc") String sortDirection,
 		@RequestParam(required = false, defaultValue = "10") int size) {
 
-		// cursor가 있으면 cursor에서 idAfter 추출
 		Long actualIdAfter = idAfter;
 		if (cursor != null && !cursor.isEmpty()) {
 			actualIdAfter = decodeCursor(cursor);
@@ -51,7 +50,6 @@ public class IndexDataController {
 			.map(IndexDataResponseDto::from)
 			.collect(Collectors.toList());
 
-		// 다음 페이지가 있으면 cursor 생성
 		String nextCursor = null;
 		String nextIdAfter = null;
 		if (indexDataPage.hasNext() && !content.isEmpty()) {
@@ -84,7 +82,6 @@ public class IndexDataController {
 	private Long decodeCursor(String cursor) {
 		try {
 			String json = new String(Base64.getDecoder().decode(cursor));
-			// 간단한 JSON 파싱 ({"id":20} 형태)
 			String idStr = json.replaceAll("[{}\"id:]", "");
 			return Long.parseLong(idStr.trim());
 		} catch (Exception e) {
