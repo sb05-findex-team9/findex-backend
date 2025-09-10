@@ -89,12 +89,14 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 	@Query("SELECT MAX(id.baseDate) FROM IndexData id WHERE id.indexInfo.id = :indexInfoId")
 	Optional<LocalDate> findMaxBaseDateByIndexInfoId(@Param("indexInfoId") Long indexInfoId);
 
+	// 성과 랭킹을 위한 최적화된 쿼리 추가
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
 		"WHERE id.baseDate = :targetDate " +
 		"AND id.closingPrice IS NOT NULL")
 	List<IndexData> findAllByBaseDateWithIndexInfo(@Param("targetDate") LocalDate targetDate);
 
+	// 특정 날짜 범위의 모든 지수 데이터 조회 (배치 방식)
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
 		"WHERE id.baseDate IN :dates " +

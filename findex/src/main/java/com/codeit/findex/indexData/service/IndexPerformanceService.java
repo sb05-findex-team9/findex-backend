@@ -20,6 +20,7 @@ import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -48,98 +49,61 @@ public class IndexPerformanceService {
 		LocalDate latestDate = indexDataRepository.findMaxBaseDate()
 			.orElseThrow(() -> new IllegalStateException("거래 데이터가 없습니다."));
 
+		// 비교 기준일 계산
 		LocalDate compareDate = calculateCompareDate(latestDate, periodType);
-
 		compareDate = findNearestTradingDate(compareDate, latestDate);
 
-		List<IndexPerformanceRankResponse> rankings;
-
 		if (indexInfoId != null) {
-			// 특정 지수의 랭킹 조회
-			rankings = getSpecificIndexRanking(indexInfoId, latestDate, compareDate, periodType);
+			return getSpecificIndexRanking(indexInfoId, latestDate, compareDate, periodType);
 		} else {
-			rankings = getAllIndexRankingOptimized(latestDate, compareDate, limit);
+			return getAllIndexRankingBatch(latestDate, compareDate, limit);
 		}
-
-		return rankings;
 	}
 
-	private LocalDate calculateCompareDate(LocalDate baseDate, PerformancePeriodType periodType) {
-		return switch (periodType) {
-			case DAILY -> getPreviousTradingDay(baseDate);
-			case WEEKLY -> getPreviousTradingDay(baseDate.minusWeeks(1));
-			case MONTHLY -> getPreviousTradingDay(baseDate.minusMonths(1));
-		};
-	}
-
-	private LocalDate getPreviousTradingDay(LocalDate date) {
-		LocalDate previousDay = date;
-
-		if (previousDay.getDayOfWeek() == DayOfWeek.SATURDAY) {
-			previousDay = previousDay.minusDays(1);
-		} else if (previousDay.getDayOfWeek() == DayOfWeek.SUNDAY) {
-			previousDay = previousDay.minusDays(2);
-		}
-
-		return previousDay;
-	}
-
-	private LocalDate findNearestTradingDate(LocalDate targetDate, LocalDate maxDate) {
-		LocalDate searchDate = targetDate;
-
-		for (int i = 0; i < 10; i++) {
-			if (searchDate.isAfter(maxDate)) {
-				searchDate = searchDate.minusDays(1);
-				continue;
-			}
-
-			List<IndexData> dataList = indexDataRepository.findAllByBaseDateWithIndexInfo(searchDate);
-			if (!dataList.isEmpty()) {
-				return searchDate;
-			}
-
-			searchDate = searchDate.minusDays(1);
-		}
-
-		return targetDate;
-	}
-
-	private List<IndexPerformanceRankResponse> getAllIndexRankingOptimized(
+	private List<IndexPerformanceRankResponse> getAllIndexRankingBatch(
 		LocalDate latestDate,
 		LocalDate compareDate,
 		Integer limit) {
 
-		Map<Long, IndexData> currentDataMap = indexDataRepository
-			.findAllByBaseDateWithIndexInfo(latestDate)
-			.stream()
-			.collect(Collectors.toMap(data -> data.getIndexInfo().getId(), data -> data));
+		// 배치로 두 날짜의 모든 데이터 조회
+		List<LocalDate> dates = Arrays.asList(latestDate, compareDate);
+		List<IndexData> allData = indexDataRepository.findAllByBaseDateInWithIndexInfo(dates);
 
-		Map<Long, IndexData> compareDataMap = indexDataRepository
-			.findAllByBaseDateWithIndexInfo(compareDate)
-			.stream()
-			.collect(Collectors.toMap(data -> data.getIndexInfo().getId(), data -> data));
+		// 날짜별로 그룹화
+		Map<LocalDate, Map<Long, IndexData>> dataByDate = allData.stream()
+			.collect(Collectors.groupingBy(
+				IndexData::getBaseDate,
+				Collectors.toMap(
+					data -> data.getIndexInfo().getId(),
+					data -> data,
+					(existing, replacement) -> existing
+				)
+			));
 
-		List<IndexPerformanceData> performanceDataList = new ArrayList<>();
+		Map<Long, IndexData> currentDataMap = dataByDate.getOrDefault(latestDate, Collections.emptyMap());
+		Map<Long, IndexData> compareDataMap = dataByDate.getOrDefault(compareDate, Collections.emptyMap());
 
-		for (Map.Entry<Long, IndexData> entry : currentDataMap.entrySet()) {
-			Long indexInfoId = entry.getKey();
-			IndexData currentData = entry.getValue();
-			IndexData compareData = compareDataMap.get(indexInfoId);
+		// 성과 계산 및 정렬
+		List<IndexPerformanceData> performanceDataList = currentDataMap.entrySet().stream()
+			.map(entry -> {
+				Long indexInfoId = entry.getKey();
+				IndexData currentData = entry.getValue();
+				IndexData compareData = compareDataMap.get(indexInfoId);
 
-			if (compareData != null && currentData.getClosingPrice() != null && compareData.getClosingPrice() != null) {
-				IndexPerformanceData perfData = calculatePerformance(
-					currentData.getIndexInfo(), currentData, compareData);
-				performanceDataList.add(perfData);
-			}
-		}
-
-		// 등락률 기준 내림차순 정렬
-		performanceDataList.sort((a, b) ->
-			Float.compare(b.getFluctuationRate(), a.getFluctuationRate()));
-
-		// 상위 N개만 선택하고 랭킹 부여
-		return performanceDataList.stream()
+				if (compareData != null &&
+					currentData.getClosingPrice() != null &&
+					compareData.getClosingPrice() != null) {
+					return calculatePerformance(currentData.getIndexInfo(), currentData, compareData);
+				}
+				return null;
+			})
+			.filter(Objects::nonNull)
+			.sorted((a, b) -> Float.compare(b.getFluctuationRate(), a.getFluctuationRate()))
 			.limit(limit)
+			.collect(Collectors.toList());
+
+		// 랭킹 부여
+		return performanceDataList.stream()
 			.map(perfData -> {
 				int rank = performanceDataList.indexOf(perfData) + 1;
 				return createRankResponse(perfData, rank);
@@ -183,12 +147,13 @@ public class IndexPerformanceService {
 		IndexPerformanceData perfData = calculatePerformance(
 			indexInfo, currentDataOpt.get(), compareDataOpt.get());
 
-		int rank = calculateRankAmongAllOptimized(perfData.getFluctuationRate(), latestDate, compareDate);
+		// 전체 지수 중 순위 계산 - 배치 최적화 방식 사용
+		int rank = calculateRankBatch(perfData.getFluctuationRate(), latestDate, compareDate);
 
 		return List.of(createRankResponse(perfData, rank));
 	}
 
-	private int calculateRankAmongAllOptimized(float targetFluctuationRate,
+	private int calculateRankBatch(float targetFluctuationRate,
 		LocalDate latestDate,
 		LocalDate compareDate) {
 
@@ -223,6 +188,49 @@ public class IndexPerformanceService {
 		return rank;
 	}
 
+	private LocalDate calculateCompareDate(LocalDate baseDate, PerformancePeriodType periodType) {
+		return switch (periodType) {
+			case DAILY -> getPreviousTradingDay(baseDate);
+			case WEEKLY -> getPreviousTradingDay(baseDate.minusWeeks(1));
+			case MONTHLY -> getPreviousTradingDay(baseDate.minusMonths(1));
+		};
+	}
+
+	private LocalDate getPreviousTradingDay(LocalDate date) {
+		LocalDate previousDay = date;
+
+		// 주말인 경우 금요일로 조정
+		if (previousDay.getDayOfWeek() == DayOfWeek.SATURDAY) {
+			previousDay = previousDay.minusDays(1);
+		} else if (previousDay.getDayOfWeek() == DayOfWeek.SUNDAY) {
+			previousDay = previousDay.minusDays(2);
+		}
+
+		return previousDay;
+	}
+
+	private LocalDate findNearestTradingDate(LocalDate targetDate, LocalDate maxDate) {
+		LocalDate searchDate = targetDate;
+
+		// 최대 10일간 검색
+		for (int i = 0; i < 10; i++) {
+			if (searchDate.isAfter(maxDate)) {
+				searchDate = searchDate.minusDays(1);
+				continue;
+			}
+
+			// 해당 날짜에 데이터가 있는지 확인
+			List<IndexData> dataList = indexDataRepository.findAllByBaseDateWithIndexInfo(searchDate);
+			if (!dataList.isEmpty()) {
+				return searchDate;
+			}
+
+			searchDate = searchDate.minusDays(1);
+		}
+
+		return targetDate;
+	}
+
 	private IndexPerformanceData calculatePerformance(
 		IndexInfo indexInfo,
 		IndexData currentData,
@@ -241,10 +249,7 @@ public class IndexPerformanceService {
 				.build();
 		}
 
-		// 전일 대비 = 현재가 - 이전가
 		BigDecimal versus = currentPrice.subtract(beforePrice);
-
-		// 등락률 = (현재가 - 이전가) / 이전가 * 100
 		float fluctuationRate = calculateFluctuationRate(currentPrice, beforePrice);
 
 		return IndexPerformanceData.builder()

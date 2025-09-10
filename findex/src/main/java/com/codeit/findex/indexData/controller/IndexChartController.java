@@ -22,8 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 public class IndexChartController {
 	private final IndexChartService indexChartService;
 
-	// 지수 차트 조회
-	@GetMapping("/{id}")
+	@GetMapping("/{id}/chart")
 	public ResponseEntity<IndexChartResponse> getIndexChartData(
 		@PathVariable("id") Long id,
 		@RequestParam(value = "periodType", required = false) String periodTypeStr) {
