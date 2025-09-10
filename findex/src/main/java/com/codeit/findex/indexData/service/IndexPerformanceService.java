@@ -20,7 +20,6 @@ import com.codeit.findex.indexData.dto.IndexPerformanceDto;
 import com.codeit.findex.indexData.dto.IndexPerformanceRankResponse;
 import com.codeit.findex.indexData.repository.IndexDataRepository;
 import com.codeit.findex.indexInfo.domain.IndexInfo;
-import com.codeit.findex.indexInfo.repository.IndexInfoRepository;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -34,7 +33,6 @@ import lombok.extern.slf4j.Slf4j;
 public class IndexPerformanceService {
 
 	private final IndexDataRepository indexDataRepository;
-	private final IndexInfoRepository indexInfoRepository;
 
 	public List<IndexPerformanceRankResponse> getPerformanceRanking(
 		Long indexInfoId,
@@ -87,7 +85,6 @@ public class IndexPerformanceService {
 
 		log.info("전체 랭킹 조회 시작 - limit: {}", limit);
 
-		// 1. Weekly/Monthly의 경우 평균 계산을 위한 모든 필요 데이터를 한 번에 조회
 		List<IndexPerformanceData> performanceDataList;
 
 		if (periodType == PerformancePeriodType.DAILY) {
@@ -96,13 +93,11 @@ public class IndexPerformanceService {
 			performanceDataList = getPeriodPerformanceData(latestDate, compareDate, periodType);
 		}
 
-		// 2. 등락률 기준으로 정렬하여 상위 limit개 선택
 		List<IndexPerformanceData> topPerformers = performanceDataList.stream()
 			.sorted((a, b) -> Float.compare(b.getFluctuationRate(), a.getFluctuationRate()))
 			.limit(limit)
-			.collect(Collectors.toList());
+			.toList();
 
-		// 3. 응답 객체 생성
 		List<IndexPerformanceRankResponse> result = new ArrayList<>();
 		for (int i = 0; i < topPerformers.size(); i++) {
 			result.add(createRankResponse(topPerformers.get(i), i + 1));
@@ -113,11 +108,9 @@ public class IndexPerformanceService {
 	}
 
 	private List<IndexPerformanceData> getDailyPerformanceData(LocalDate latestDate, LocalDate compareDate) {
-		// 두 날짜의 모든 데이터를 한 번에 조회 (이미 JOIN FETCH로 최적화됨)
 		List<LocalDate> dates = Arrays.asList(latestDate, compareDate);
 		List<IndexData> allData = indexDataRepository.findAllByBaseDateInWithIndexInfo(dates);
 
-		// 날짜별, 지수별로 그룹화
 		Map<LocalDate, Map<Long, IndexData>> dataByDate = allData.stream()
 			.collect(Collectors.groupingBy(
 				IndexData::getBaseDate,
@@ -166,20 +159,16 @@ public class IndexPerformanceService {
 
 	private List<IndexPerformanceData> getPeriodPerformanceData(LocalDate latestDate, LocalDate compareDate,
 		PerformancePeriodType periodType) {
-		// 1. 최신 날짜의 모든 지수 데이터 조회 (현재가)
 		List<IndexData> currentDataList = indexDataRepository.findAllByBaseDateWithIndexInfo(latestDate);
 
-		// 2. 모든 지수 ID 추출
 		Set<Long> indexInfoIds = currentDataList.stream()
 			.map(data -> data.getIndexInfo().getId())
 			.collect(Collectors.toSet());
 
-		// 3. 배치로 모든 지수의 평균값 조회 - 한 번의 쿼리로 처리
 		Map<Long, Double> averagePriceMap = indexDataRepository.findAverageClosingPricesByIndexInfosBetween(
 			new ArrayList<>(indexInfoIds), compareDate, latestDate
 		);
 
-		// 4. 성과 데이터 계산
 		return currentDataList.stream()
 			.map(currentData -> {
 				Long indexInfoId = currentData.getIndexInfo().getId();
@@ -200,7 +189,7 @@ public class IndexPerformanceService {
 				float fluctuationRate = calculateFluctuationRate(currentPrice, comparePrice);
 
 				return IndexPerformanceData.builder()
-					.indexInfo(currentData.getIndexInfo()) // 이미 JOIN FETCH된 데이터
+					.indexInfo(currentData.getIndexInfo())
 					.currentPrice(currentPrice)
 					.beforePrice(comparePrice)
 					.versus(versus)
@@ -219,7 +208,6 @@ public class IndexPerformanceService {
 
 		log.info("특정 지수 랭킹 조회 시작 - indexInfoId: {}", indexInfoId);
 
-		// IndexInfo와 IndexData를 함께 조회하여 N+1 문제 방지
 		IndexData currentIndexData = indexDataRepository
 			.findByIndexInfoIdAndBaseDateWithIndexInfo(indexInfoId, latestDate)
 			.orElseThrow(() -> new IllegalArgumentException("해당 날짜의 지수 데이터가 없습니다."));
@@ -268,7 +256,6 @@ public class IndexPerformanceService {
 	}
 
 	private int calculateDailyRank(float targetFluctuationRate, LocalDate latestDate, LocalDate compareDate) {
-		// 두 날짜의 모든 데이터를 한 번에 조회
 		List<LocalDate> dates = Arrays.asList(latestDate, compareDate);
 		List<IndexData> allData = indexDataRepository.findAllByBaseDateInWithIndexInfo(dates);
 
@@ -305,14 +292,12 @@ public class IndexPerformanceService {
 	}
 
 	private int calculatePeriodRank(float targetFluctuationRate, LocalDate latestDate, LocalDate compareDate) {
-		// 현재 날짜의 모든 데이터 조회 - DTO 프로젝션으로 N+1 완전 해결
 		List<IndexPerformanceDto> currentDataList = indexDataRepository.findAllByBaseDateWithIndexInfoDto(latestDate);
 
 		Set<Long> indexInfoIds = currentDataList.stream()
 			.map(IndexPerformanceDto::getIndexInfoId)
 			.collect(Collectors.toSet());
 
-		// 배치로 모든 지수의 평균값 조회
 		Map<Long, Double> averagePriceMap = indexDataRepository.findAverageClosingPricesByIndexInfosBetween(
 			new ArrayList<>(indexInfoIds), compareDate, latestDate
 		);

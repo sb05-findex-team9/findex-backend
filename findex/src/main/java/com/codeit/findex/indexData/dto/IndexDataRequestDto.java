@@ -40,7 +40,7 @@ public class IndexDataRequestDto {
 		return IndexData.builder()
 			.indexInfo(indexInfo)
 			.baseDate(this.baseDate)
-			.sourceType(finalSourceType) // null 체크 후 기본값 적용
+			.sourceType(finalSourceType)
 			.marketPrice(this.marketPrice != null ? BigDecimal.valueOf(this.marketPrice) : null)
 			.closingPrice(this.closingPrice != null ? BigDecimal.valueOf(this.closingPrice) : null)
 			.highPrice(this.highPrice != null ? BigDecimal.valueOf(this.highPrice) : null)

@@ -39,7 +39,7 @@ public class IndexDataService {
 
 		// IndexInfo 조회 및 검증
 		IndexInfo indexInfo = indexInfoRepository.findById(requestDto.getIndexInfoId())
-			.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 지수 정보 ID입니다: " + requestDto.getIndexInfoId()));
+			.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 지수 정보입니다."));
 
 		// 중복 데이터 체크 (같은 지수, 같은 날짜)
 		boolean exists = indexDataRepository.findByIndexInfoIdAndBaseDate(
@@ -48,11 +48,7 @@ public class IndexDataService {
 		).isPresent();
 
 		if (exists) {
-			throw new IllegalArgumentException(
-				String.format("해당 지수(%d)의 %s 데이터가 이미 존재합니다.",
-					requestDto.getIndexInfoId(),
-					requestDto.getBaseDate())
-			);
+			throw new IllegalArgumentException("같은 날짜의 데이터는 추가할 수 없습니다.");
 		}
 
 		// 엔티티 생성
@@ -65,10 +61,7 @@ public class IndexDataService {
 			return indexDataRepository.save(indexData);
 		} catch (DataIntegrityViolationException e) {
 			log.error("데이터 무결성 위반: {}", e.getMessage());
-			if (e.getMessage().contains("source_type")) {
-				throw new IllegalArgumentException("sourceType 필드가 필수입니다.");
-			}
-			throw new IllegalArgumentException("데이터 저장 중 오류가 발생했습니다: " + e.getMessage());
+			throw new IllegalArgumentException("데이터 저장 실패");
 		}
 	}
 }

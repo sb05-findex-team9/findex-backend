@@ -24,6 +24,7 @@ public class IndexPerformanceController {
 
 	private final IndexPerformanceService indexPerformanceService;
 
+	// 지수 성과 랭킹 조회
 	@GetMapping("/performance/rank")
 	public ResponseEntity<List<IndexPerformanceRankResponse>> getPerformanceRanking(
 		@RequestParam(value = "indexInfoId", required = false) Long indexInfoId,
@@ -31,7 +32,6 @@ public class IndexPerformanceController {
 		@RequestParam(value = "limit", required = false) Integer limit) {
 
 		try {
-			// 성과 기간 유형 파싱
 			PerformancePeriodType periodType = null;
 			if (periodTypeStr != null && !periodTypeStr.isEmpty()) {
 				try {
@@ -43,7 +43,6 @@ public class IndexPerformanceController {
 
 			log.info("성과 랭킹 조회 요청: indexInfoId={}, periodType={}, limit={}", indexInfoId, periodType, limit);
 
-			// 서비스 호출
 			List<IndexPerformanceRankResponse> rankings =
 				indexPerformanceService.getPerformanceRanking(indexInfoId, periodType, limit);
 

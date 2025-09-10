@@ -35,7 +35,6 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("endDate") LocalDate endDate,
 		Pageable pageable);
 
-	// 수정된 메서드 - baseDate와 id를 모두 고려한 ASC 조회
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
 		"LEFT JOIN FETCH ii.autoSyncConfig " +
@@ -51,7 +50,6 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("lastId") Long lastId,
 		Pageable pageable);
 
-	// 수정된 메서드 - baseDate와 id를 모두 고려한 DESC 조회
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
 		"LEFT JOIN FETCH ii.autoSyncConfig " +
@@ -67,7 +65,6 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("lastId") Long lastId,
 		Pageable pageable);
 
-	// 기존 메서드들은 그대로 유지...
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
 		"LEFT JOIN FETCH ii.autoSyncConfig " +
@@ -94,12 +91,8 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("indexInfoId") Long indexInfoId,
 		@Param("baseDate") LocalDate baseDate);
 
-	// 나머지 메서드들도 동일하게 유지...
 	@Query("SELECT MAX(id.baseDate) FROM IndexData id")
 	Optional<LocalDate> findMaxBaseDate();
-
-	@Query("SELECT MAX(id.baseDate) FROM IndexData id WHERE id.indexInfo.id = :indexInfoId")
-	Optional<LocalDate> findMaxBaseDateByIndexInfoId(@Param("indexInfoId") Long indexInfoId);
 
 	@Query("SELECT COUNT(id) FROM IndexData id " +
 		"WHERE id.baseDate = :targetDate " +
@@ -180,41 +173,4 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 			));
 	}
 
-	@Query("SELECT COUNT(DISTINCT id.indexInfo.id) FROM IndexData id " +
-		"WHERE id.baseDate = :targetDate " +
-		"AND id.closingPrice IS NOT NULL")
-	long countDistinctIndexInfoByBaseDateAndClosingPriceIsNotNull(@Param("targetDate") LocalDate targetDate);
-
-	@Query("SELECT DISTINCT d.indexInfo.id FROM IndexData d " +
-		"WHERE d.baseDate BETWEEN :startDate AND :endDate " +
-		"AND d.closingPrice IS NOT NULL")
-	List<Long> findDistinctIndexInfoIdsByDateRangeAndClosingPriceIsNotNull(
-		@Param("startDate") LocalDate startDate,
-		@Param("endDate") LocalDate endDate);
-
-	@Query("SELECT DISTINCT d.indexInfo.id FROM IndexData d " +
-		"WHERE d.baseDate = :targetDate " +
-		"AND d.closingPrice IS NOT NULL")
-	List<Long> findDistinctIndexInfoIdsByBaseDateAndClosingPriceIsNotNull(@Param("targetDate") LocalDate targetDate);
-
-	@Query("SELECT id FROM IndexData id " +
-		"LEFT JOIN FETCH id.indexInfo ii " +
-		"LEFT JOIN FETCH ii.autoSyncConfig " +
-		"WHERE id.indexInfo.id IN :indexInfoIds " +
-		"AND id.baseDate = :targetDate " +
-		"AND id.closingPrice IS NOT NULL")
-	List<IndexData> findAllByIndexInfoIdsAndBaseDateWithIndexInfo(
-		@Param("indexInfoIds") List<Long> indexInfoIds,
-		@Param("targetDate") LocalDate targetDate);
-
-	@Query("SELECT id FROM IndexData id " +
-		"LEFT JOIN FETCH id.indexInfo ii " +
-		"LEFT JOIN FETCH ii.autoSyncConfig " +
-		"WHERE id.indexInfo.id IN :indexInfoIds " +
-		"AND id.baseDate IN :dates " +
-		"AND id.closingPrice IS NOT NULL " +
-		"ORDER BY id.indexInfo.id, id.baseDate")
-	List<IndexData> findAllByIndexInfoIdsAndBaseDateInWithIndexInfo(
-		@Param("indexInfoIds") List<Long> indexInfoIds,
-		@Param("dates") List<LocalDate> dates);
 }

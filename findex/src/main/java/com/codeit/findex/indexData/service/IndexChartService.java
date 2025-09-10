@@ -33,14 +33,11 @@ public class IndexChartService {
 
 	@Cacheable(value = "indexChart", key = "#indexInfoId + '_' + (#periodType != null ? #periodType.name() : 'ALL')")
 	public IndexChartResponse getIndexChartData(Long indexInfoId, PeriodType periodType) {
-		// IndexInfo 존재 여부 확인
 		IndexInfo indexInfo = indexInfoRepository.findById(indexInfoId)
 			.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 지수 정보 ID입니다: " + indexInfoId));
 
-		// 기간 계산
 		LocalDate startDate = calculateStartDate(periodType);
 
-		// 데이터 조회 - 이미 최적화된 쿼리 사용
 		List<IndexData> indexDataList = getIndexDataOptimized(indexInfoId, startDate);
 
 		if (indexDataList.isEmpty()) {
@@ -48,10 +45,8 @@ public class IndexChartService {
 			return createEmptyResponse(indexInfo, periodType);
 		}
 
-		// 차트 데이터 생성 - 스트림 최적화
 		List<IndexChartResponse.DataPoint> dataPoints = createDataPointsOptimized(indexDataList, startDate);
 
-		// 이동평균선 계산 - 병렬 처리
 		List<IndexChartResponse.DataPoint> ma5DataPoints = calculateMovingAverageOptimized(indexDataList, 5, startDate);
 		List<IndexChartResponse.DataPoint> ma20DataPoints = calculateMovingAverageOptimized(indexDataList, 20,
 			startDate);
@@ -113,24 +108,20 @@ public class IndexChartService {
 
 		List<IndexChartResponse.DataPoint> maDataPoints = new ArrayList<>();
 
-		// 유효한 가격 데이터만 미리 필터링
 		List<IndexData> validData = dataList.stream()
 			.filter(data -> data.getClosingPrice() != null)
-			.collect(Collectors.toList());
+			.toList();
 
 		if (validData.size() < period) {
 			return maDataPoints;
 		}
 
-		// 슬라이딩 윈도우 방식으로 이동평균 계산
 		BigDecimal sum = BigDecimal.ZERO;
 
-		// 초기 윈도우 합계 계산
 		for (int i = 0; i < period; i++) {
 			sum = sum.add(validData.get(i).getClosingPrice());
 		}
 
-		// 첫 번째 이동평균 추가
 		LocalDate firstDate = validData.get(period - 1).getBaseDate();
 		if (startDate == null || !firstDate.isBefore(startDate)) {
 			float average = sum.divide(BigDecimal.valueOf(period), 2, RoundingMode.HALF_UP).floatValue();
@@ -140,9 +131,7 @@ public class IndexChartService {
 				.build());
 		}
 
-		// 슬라이딩 윈도우로 나머지 계산
 		for (int i = period; i < validData.size(); i++) {
-			// 이전 값 제거, 새 값 추가
 			sum = sum.subtract(validData.get(i - period).getClosingPrice())
 				.add(validData.get(i).getClosingPrice());
 
