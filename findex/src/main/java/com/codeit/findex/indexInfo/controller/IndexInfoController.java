@@ -1,5 +1,7 @@
 package com.codeit.findex.indexInfo.controller;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,6 +21,7 @@ import com.codeit.findex.indexInfo.dto.request.IndexInfoUpdateRequestDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoCreateResponseDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoGetByIdResponseDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoGetResponseDto;
+import com.codeit.findex.indexInfo.dto.response.IndexInfoSummaryResponseDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoUpdateResponseDto;
 import com.codeit.findex.indexInfo.service.IndexInfoService;
 
@@ -73,4 +76,11 @@ public class IndexInfoController {
 			indexInfoUpdateRequestDto);
 		return ResponseEntity.ok(indexInfoUpdateResponseDto);
 	}
+
+	@GetMapping("/summaries")
+	public ResponseEntity<List<IndexInfoSummaryResponseDto>> getSummaries(
+	){
+		return ResponseEntity.ok(indexInfoService.getSummarizedIndexInfos());
+	}
+
 }

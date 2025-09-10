@@ -7,7 +7,6 @@ DROP TABLE IF EXISTS auto_sync_configs;
 DROP TABLE IF EXISTS index_infos;
 
 
-
 -- =========================
 -- index_infos (master)
 -- =========================

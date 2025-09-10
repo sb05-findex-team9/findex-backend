@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,15 +25,9 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long> {
 			        case when :sortDirection = 'asc' then i.indexClassification end asc,
 			        case when :sortDirection = 'desc' then i.indexClassification end desc,
 			        i.id asc
-			""",
-		countQuery = """
-			    select count(i) from IndexInfo i
-			    where (:indexClassification is null or i.indexClassification like concat('%', cast(:indexClassification as string), '%'))
-			        and (:indexName is null or i.indexName like concat('%', cast(:indexName as string), '%'))
-			        and (:favorite is null or i.favorite = :favorite)
 			"""
 	)
-	Page<IndexInfo> findAllByIndexClassificationCursor(
+	Slice<IndexInfo> findAllByIndexClassificationCursor(
 		@Param("indexClassification") String indexClassification,
 		@Param("indexName") String indexName,
 		@Param("favorite") Boolean favorite,
@@ -55,15 +50,9 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long> {
             case when :sortDirection = 'asc' then i.indexName end asc,
             case when :sortDirection = 'desc' then i.indexName end desc,
             i.id asc
-    """,
-		countQuery = """
-			select count(i) from IndexInfo i
-			where (:indexClassification is null or i.indexClassification like concat('%', cast(:indexClassification as string), '%'))
-			    and (:indexName is null or i.indexName like concat('%', cast(:indexName as string), '%'))
-			    and (:favorite is null or i.favorite = :favorite)
-			"""
+    """
 	)
-	Page<IndexInfo> findAllByIndexNameCursor(
+	Slice<IndexInfo> findAllByIndexNameCursor(
 		@Param("indexClassification") String indexClassification,
 		@Param("indexName") String indexName,
 		@Param("favorite") Boolean favorite,
@@ -86,15 +75,9 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long> {
             case when :sortDirection = 'asc' then i.employedItemsCount end asc,
             case when :sortDirection = 'desc' then i.employedItemsCount end desc,
             i.id asc
-    """,
-		countQuery = """
-			select count(i) from IndexInfo i
-			where (:indexClassification is null or i.indexClassification like concat('%', cast(:indexClassification as string), '%'))
-			    and (:indexName is null or i.indexName like concat('%', cast(:indexName as string), '%'))
-			    and (:favorite is null or i.favorite = :favorite)
-			"""
+    """
 	)
-	Page<IndexInfo> findAllByEmployedItemsCountCursor(
+	Slice<IndexInfo> findAllByEmployedItemsCountCursor(
 		@Param("indexClassification") String indexClassification,
 		@Param("indexName") String indexName,
 		@Param("favorite") Boolean favorite,
