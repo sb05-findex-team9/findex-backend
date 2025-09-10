@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -36,45 +37,21 @@ public class ApiIndexInfoService {
 	public void fetchAndSaveIndexInfo() {
 		try {
 			int pageNo = 1;
-			int numOfRows = 100000;
-			boolean hasMoreData = true;
-			int savedCount = 0;
-			int duplicateCount = 0;
+			int numOfRows = 240;
+			String url = buildApiUrl(pageNo, numOfRows);
 
-			while (hasMoreData) {
-				String url = buildApiUrl(pageNo, numOfRows);
+			ApiResponseDto response = restTemplate.getForObject(url, ApiResponseDto.class);
 
-				// API 호출
-				ApiResponseDto response = restTemplate.getForObject(url, ApiResponseDto.class);
+			if (response != null && response.getResponse() != null
+				&& response.getResponse().getBody() != null
+				&& response.getResponse().getBody().getItems() != null) {
 
-				// 응답 데이터 검증
-				if (response != null && response.getResponse() != null
-					&& response.getResponse().getBody() != null
-					&& response.getResponse().getBody().getItems() != null) {
+				List<ApiResponseDto.Item> items = response.getResponse().getBody().getItems().getItem();
 
-					List<ApiResponseDto.Item> items = response.getResponse().getBody().getItems().getItem();
-
-					if (items != null && !items.isEmpty()) {
-						for (ApiResponseDto.Item item : items) {
-							if (saveIndexInfo(item)) {
-								savedCount++;
-							} else {
-								duplicateCount++;
-							}
-						}
-
-						// 다음 페이지 확인
-						int totalCount = response.getResponse().getBody().getTotalCount();
-						if (pageNo * numOfRows >= totalCount) {
-							hasMoreData = false;
-						} else {
-							pageNo++;
-						}
-					} else {
-						hasMoreData = false;
+				if (items != null && !items.isEmpty()) {
+					for (ApiResponseDto.Item item : items) {
+						saveIndexInfo(item);
 					}
-				} else {
-					hasMoreData = false;
 				}
 			}
 		} catch (Exception e) {
@@ -82,37 +59,26 @@ public class ApiIndexInfoService {
 		}
 	}
 
-	private boolean saveIndexInfo(ApiResponseDto.Item item) {
-		try {
-			String indexName = item.getIdxNm();
-			String indexClassification = item.getIdxCsf();
-			Integer employedItemsCount = parseInteger(item.getEpyItmsCnt());
-			LocalDate basePointInTime = parseDate(item.getBasPntm());
+	private void saveIndexInfo(ApiResponseDto.Item item) {
+		String indexName = item.getIdxNm();
+		String indexClassification = item.getIdxCsf();
 
-			// 중복 데이터 확인
-			List<ApiIndexInfo> existingInfos = indexInfoRepository
-				.findByIndexNameAndIndexClassificationAndEmployedItemsCountAndBasePointInTime(
-					indexName, indexClassification, employedItemsCount, basePointInTime);
+		Optional<ApiIndexInfo> existingInfo = indexInfoRepository
+			.findByIndexNameAndIndexClassification(indexName, indexClassification).stream().findFirst();
 
-			if (!existingInfos.isEmpty()) {
-				return false;
-			}
-
-			// 데이터 저장
-			ApiIndexInfo indexInfo = ApiIndexInfo.builder()
-				.indexName(indexName)
-				.indexClassification(indexClassification)
-				.employedItemsCount(employedItemsCount)
-				.basePointInTime(basePointInTime)
-				.baseIndex(parseBigDecimal(item.getBasIdx()))
-				.build();
-
-			indexInfoRepository.save(indexInfo);
-			return true;
-
-		} catch (Exception e) {
-			return false;
+		if (existingInfo.isPresent()) {
+			return;
 		}
+
+		ApiIndexInfo indexInfo = ApiIndexInfo.builder()
+			.indexName(indexName)
+			.indexClassification(indexClassification)
+			.employedItemsCount(parseInteger(item.getEpyItmsCnt()))
+			.basePointInTime(parseDate(item.getBasPntm()))
+			.baseIndex(parseBigDecimal(item.getBasIdx()))
+			.build();
+
+		indexInfoRepository.save(indexInfo);
 	}
 
 	private String buildApiUrl(int pageNo, int numOfRows) {

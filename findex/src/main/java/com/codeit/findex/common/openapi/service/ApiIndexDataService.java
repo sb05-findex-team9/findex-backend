@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -45,17 +46,17 @@ public class ApiIndexDataService {
 	public void fetchAndSaveIndexData() {
 		try {
 			int pageNo = 1;
-			int numOfRows = 100000;
+			int numOfRows = 10000;
 			boolean hasMoreData = true;
 			int savedCount = 0;
+
+			LocalDate oneYearAgo = LocalDate.now().minusYears(1);
 
 			while (hasMoreData) {
 				String url = buildApiUrl(pageNo, numOfRows);
 
-				// API 호출
 				ApiResponseDto response = restTemplate.getForObject(url, ApiResponseDto.class);
 
-				// 응답 데이터 검증
 				if (response != null && response.getResponse() != null
 					&& response.getResponse().getBody() != null
 					&& response.getResponse().getBody().getItems() != null) {
@@ -63,14 +64,32 @@ public class ApiIndexDataService {
 					List<ApiResponseDto.Item> items = response.getResponse().getBody().getItems().getItem();
 
 					if (items != null && !items.isEmpty()) {
-						int inserted = saveIndexDataBatch(items);
-						savedCount += inserted;
+						boolean containsOldData = items.stream()
+							.map(i -> parseDate(i.getBasDt()))
+							.filter(Objects::nonNull)
+							.anyMatch(d -> d.isBefore(oneYearAgo));
 
-						int totalCount = response.getResponse().getBody().getTotalCount();
-						if (pageNo * numOfRows >= totalCount) {
+						List<ApiResponseDto.Item> filteredItems = items.stream()
+							.filter(i -> {
+								LocalDate d = parseDate(i.getBasDt());
+								return d != null && !d.isBefore(oneYearAgo);
+							})
+							.toList();
+
+						if (!filteredItems.isEmpty()) {
+							int inserted = saveIndexDataBatch(filteredItems);
+							savedCount += inserted;
+						}
+
+						if (containsOldData) {
 							hasMoreData = false;
 						} else {
-							pageNo++;
+							int totalCount = response.getResponse().getBody().getTotalCount();
+							if (pageNo * numOfRows >= totalCount) {
+								hasMoreData = false;
+							} else {
+								pageNo++;
+							}
 						}
 					} else {
 						hasMoreData = false;
@@ -79,6 +98,8 @@ public class ApiIndexDataService {
 					hasMoreData = false;
 				}
 			}
+
+			System.out.println("Saved count = " + savedCount);
 		} catch (Exception e) {
 			throw new RuntimeException("Failed to fetch index data", e);
 		}
@@ -88,16 +109,12 @@ public class ApiIndexDataService {
 		if (items == null || items.isEmpty())
 			return 0;
 
-		// indexInfo 캐시
 		Map<String, ApiIndexInfo> infoCache = new HashMap<>();
-
-		// 리스트로 배치 저장
 		List<ApiIndexData> batch = new ArrayList<>();
 
 		for (ApiResponseDto.Item item : items) {
 			LocalDate baseDate = parseDate(item.getBasDt());
-			if (baseDate == null)
-				continue;
+			if (baseDate == null) continue;
 
 			String key = item.getIdxNm() + "_" + item.getIdxCsf();
 
@@ -134,7 +151,6 @@ public class ApiIndexDataService {
 				.build());
 		}
 
-		// indexInfo 별로 baseDate 중복 체크
 		Map<ApiIndexInfo, List<LocalDate>> datesByInfo = batch.stream()
 			.collect(Collectors.groupingBy(ApiIndexData::getIndexInfo,
 				Collectors.mapping(ApiIndexData::getBaseDate, Collectors.toList())));
@@ -148,7 +164,6 @@ public class ApiIndexDataService {
 			existingDates.forEach(d -> existingKeys.add(info.getId() + "_" + d));
 		}
 
-		// 신규 데이터만 필터링
 		List<ApiIndexData> toInsert = batch.stream()
 			.filter(d -> !existingKeys.contains(d.getIndexInfo().getId() + "_" + d.getBaseDate()))
 			.toList();
@@ -171,8 +186,7 @@ public class ApiIndexDataService {
 	}
 
 	private Integer parseInteger(String value) {
-		if (value == null || value.trim().isEmpty())
-			return null;
+		if (value == null || value.trim().isEmpty()) return null;
 		try {
 			return Integer.parseInt(value.trim());
 		} catch (NumberFormatException e) {
@@ -181,8 +195,7 @@ public class ApiIndexDataService {
 	}
 
 	private Long parseLong(String value) {
-		if (value == null || value.trim().isEmpty())
-			return null;
+		if (value == null || value.trim().isEmpty()) return null;
 		try {
 			return Long.parseLong(value.trim());
 		} catch (NumberFormatException e) {
@@ -191,8 +204,7 @@ public class ApiIndexDataService {
 	}
 
 	private BigDecimal parseBigDecimal(String value) {
-		if (value == null || value.trim().isEmpty())
-			return null;
+		if (value == null || value.trim().isEmpty()) return null;
 		try {
 			return new BigDecimal(value.trim());
 		} catch (NumberFormatException e) {
@@ -201,8 +213,7 @@ public class ApiIndexDataService {
 	}
 
 	private LocalDate parseDate(String value) {
-		if (value == null || value.trim().isEmpty())
-			return null;
+		if (value == null || value.trim().isEmpty()) return null;
 		try {
 			return LocalDate.parse(value.trim(), DATE_FORMATTER);
 		} catch (Exception e) {
