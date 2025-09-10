@@ -52,6 +52,9 @@ public class IndexData {
 	@Column(name = "low_price", precision = 18, scale = 4)
 	private BigDecimal lowPrice;
 
+	@Column(name = "versus", precision = 18, scale = 4)
+	private BigDecimal versus;
+
 	@Column(name = "fluctuation_rate", precision = 18, scale = 4)
 	private BigDecimal fluctuationRate;
 
