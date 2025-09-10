@@ -1,5 +1,7 @@
 package com.codeit.findex.indexData.dto;
 
+import java.time.LocalDate;
+
 import com.codeit.findex.indexData.domain.IndexData;
 
 import lombok.AllArgsConstructor;
@@ -12,9 +14,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class IndexDataResponseDto {
-	private Integer id;
-	private Integer indexInfoId;
-	private String baseDate;
+	private Long id;
+	private Long indexInfoId;
+	private LocalDate baseDate;
 	private String sourceType;
 	private Double marketPrice;
 	private Double closingPrice;
@@ -22,15 +24,15 @@ public class IndexDataResponseDto {
 	private Double lowPrice;
 	private Double versus;
 	private Double fluctuationRate;
-	private Integer tradingQuantity;
-	private Integer tradingPrice;
-	private Integer marketTotalAmount;
+	private Long tradingQuantity;
+	private Double tradingPrice;
+	private Double marketTotalAmount;
 
 	public static IndexDataResponseDto from(IndexData indexData) {
 		return IndexDataResponseDto.builder()
-			.id(indexData.getId() != null ? indexData.getId().intValue() : null)
-			.indexInfoId(indexData.getIndexInfo() != null ? indexData.getIndexInfo().getId().intValue() : null)
-			.baseDate(indexData.getBaseDate() != null ? indexData.getBaseDate().toString() : null)
+			.id(indexData.getId())
+			.indexInfoId(indexData.getIndexInfo() != null ? indexData.getIndexInfo().getId() : null)
+			.baseDate(indexData.getBaseDate())
 			.sourceType(indexData.getSourceType())
 			.marketPrice(indexData.getMarketPrice() != null ? indexData.getMarketPrice().doubleValue() : null)
 			.closingPrice(indexData.getClosingPrice() != null ? indexData.getClosingPrice().doubleValue() : null)
@@ -39,10 +41,10 @@ public class IndexDataResponseDto {
 			.versus(indexData.getVersus() != null ? indexData.getVersus().doubleValue() : null)
 			.fluctuationRate(
 				indexData.getFluctuationRate() != null ? indexData.getFluctuationRate().doubleValue() : null)
-			.tradingQuantity(indexData.getTradingQuantity() != null ? indexData.getTradingQuantity().intValue() : null)
-			.tradingPrice(indexData.getTradingPrice() != null ? indexData.getTradingPrice().intValue() : null)
+			.tradingQuantity(indexData.getTradingQuantity())
+			.tradingPrice(indexData.getTradingPrice() != null ? indexData.getTradingPrice().doubleValue() : null)
 			.marketTotalAmount(
-				indexData.getMarketTotalAmount() != null ? indexData.getMarketTotalAmount().intValue() : null)
+				indexData.getMarketTotalAmount() != null ? indexData.getMarketTotalAmount().doubleValue() : null)
 			.build();
 	}
 }
