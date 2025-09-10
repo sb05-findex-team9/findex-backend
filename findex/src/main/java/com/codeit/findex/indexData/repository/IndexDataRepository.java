@@ -74,4 +74,8 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 	@Query("SELECT MAX(id.baseDate) FROM IndexData id WHERE id.indexInfo.id = :indexInfoId")
 	Optional<LocalDate> findMaxBaseDateByIndexInfoId(@Param("indexInfoId") Long indexInfoId);
 
+	Optional<IndexData> findTopByIndexInfoOrderByBaseDateDesc(IndexInfo indexInfo);
+
+	Optional<IndexData> findTopByIndexInfoAndBaseDateLessThanEqualOrderByBaseDateDesc(IndexInfo indexInfo, LocalDate baseDate);
+
 }
