@@ -155,7 +155,6 @@ public class IndexChartService {
 					.build());
 			}
 		}
-
 		return maDataPoints;
 	}
 

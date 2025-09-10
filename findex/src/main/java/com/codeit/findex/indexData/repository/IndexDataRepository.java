@@ -2,7 +2,9 @@ package com.codeit.findex.indexData.repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +13,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.codeit.findex.indexData.domain.IndexData;
+import com.codeit.findex.indexData.dto.IndexPerformanceDto;
 import com.codeit.findex.indexInfo.domain.IndexInfo;
 
 public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
@@ -20,9 +23,9 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 	List<LocalDate> findExistingDates(@Param("indexInfo") IndexInfo indexInfo,
 		@Param("dates") List<LocalDate> dates);
 
-	// 기본 조회 (첫 페이지)
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
 		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
 		"AND (:endDate IS NULL OR id.baseDate <= :endDate)")
@@ -32,9 +35,9 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("endDate") LocalDate endDate,
 		Pageable pageable);
 
-	// 오름차순 정렬용 커서 조회 (ID보다 큰 값)
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
 		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
 		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
@@ -46,9 +49,9 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("lastId") Long lastId,
 		Pageable pageable);
 
-	// 내림차순 정렬용 커서 조회 (ID보다 작은 값)
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
 		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
 		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
@@ -62,6 +65,7 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE id.indexInfo.id = :indexInfoId " +
 		"AND id.baseDate >= :startDate " +
 		"ORDER BY id.baseDate ASC")
@@ -71,12 +75,14 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE id.indexInfo.id = :indexInfoId " +
 		"ORDER BY id.baseDate ASC")
 	List<IndexData> findByIndexInfoIdOrderByBaseDateAsc(@Param("indexInfoId") Long indexInfoId);
 
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE id.indexInfo.id = :indexInfoId " +
 		"AND id.baseDate = :baseDate")
 	Optional<IndexData> findByIndexInfoIdAndBaseDate(
@@ -89,18 +95,120 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 	@Query("SELECT MAX(id.baseDate) FROM IndexData id WHERE id.indexInfo.id = :indexInfoId")
 	Optional<LocalDate> findMaxBaseDateByIndexInfoId(@Param("indexInfoId") Long indexInfoId);
 
-	// 성과 랭킹을 위한 최적화된 쿼리 추가
+	@Query("SELECT COUNT(id) FROM IndexData id " +
+		"WHERE id.baseDate = :targetDate " +
+		"AND id.closingPrice IS NOT NULL")
+	long countByBaseDateAndClosingPriceIsNotNull(@Param("targetDate") LocalDate targetDate);
+
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE id.baseDate = :targetDate " +
 		"AND id.closingPrice IS NOT NULL")
 	List<IndexData> findAllByBaseDateWithIndexInfo(@Param("targetDate") LocalDate targetDate);
 
-	// 특정 날짜 범위의 모든 지수 데이터 조회 (배치 방식)
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE id.baseDate IN :dates " +
 		"AND id.closingPrice IS NOT NULL " +
 		"ORDER BY id.indexInfo.id, id.baseDate")
 	List<IndexData> findAllByBaseDateInWithIndexInfo(@Param("dates") List<LocalDate> dates);
+
+	@Query("SELECT AVG(d.closingPrice) FROM IndexData d " +
+		"WHERE d.indexInfo.id = :indexInfoId " +
+		"AND d.baseDate BETWEEN :startDate AND :endDate")
+	Optional<Double> findAverageClosingPriceByIndexInfoBetween(
+		@Param("indexInfoId") Long indexInfoId,
+		@Param("startDate") LocalDate startDate,
+		@Param("endDate") LocalDate endDate
+	);
+
+	@Query("SELECT id FROM IndexData id " +
+		"LEFT JOIN FETCH id.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +
+		"WHERE id.indexInfo.id = :indexInfoId " +
+		"AND id.baseDate = :baseDate")
+	Optional<IndexData> findByIndexInfoIdAndBaseDateWithIndexInfo(
+		@Param("indexInfoId") Long indexInfoId,
+		@Param("baseDate") LocalDate baseDate);
+
+	@Query("SELECT new com.codeit.findex.indexData.dto.IndexPerformanceDto(" +
+		"id.id, id.baseDate, id.closingPrice, " +
+		"ii.id, ii.indexName, ii.indexClassification) " +
+		"FROM IndexData id " +
+		"JOIN id.indexInfo ii " +
+		"WHERE id.baseDate = :targetDate " +
+		"AND id.closingPrice IS NOT NULL")
+	List<IndexPerformanceDto> findAllByBaseDateWithIndexInfoDto(@Param("targetDate") LocalDate targetDate);
+
+	@Query("SELECT d.indexInfo.id as indexInfoId, AVG(d.closingPrice) as avgPrice " +
+		"FROM IndexData d " +
+		"WHERE d.indexInfo.id IN :indexInfoIds " +
+		"AND d.baseDate BETWEEN :startDate AND :endDate " +
+		"AND d.closingPrice IS NOT NULL " +
+		"GROUP BY d.indexInfo.id")
+	List<IndexAveragePrice> findAverageClosingPriceProjectionsByIndexInfosBetween(
+		@Param("indexInfoIds") List<Long> indexInfoIds,
+		@Param("startDate") LocalDate startDate,
+		@Param("endDate") LocalDate endDate
+	);
+
+	interface IndexAveragePrice {
+		Long getIndexInfoId();
+
+		Double getAvgPrice();
+	}
+
+	default Map<Long, Double> findAverageClosingPricesByIndexInfosBetween(
+		List<Long> indexInfoIds,
+		LocalDate startDate,
+		LocalDate endDate) {
+
+		List<IndexAveragePrice> results = findAverageClosingPriceProjectionsByIndexInfosBetween(indexInfoIds, startDate,
+			endDate);
+		return results.stream()
+			.collect(Collectors.toMap(
+				IndexAveragePrice::getIndexInfoId,
+				IndexAveragePrice::getAvgPrice
+			));
+	}
+
+	@Query("SELECT COUNT(DISTINCT id.indexInfo.id) FROM IndexData id " +
+		"WHERE id.baseDate = :targetDate " +
+		"AND id.closingPrice IS NOT NULL")
+	long countDistinctIndexInfoByBaseDateAndClosingPriceIsNotNull(@Param("targetDate") LocalDate targetDate);
+
+	@Query("SELECT DISTINCT d.indexInfo.id FROM IndexData d " +
+		"WHERE d.baseDate BETWEEN :startDate AND :endDate " +
+		"AND d.closingPrice IS NOT NULL")
+	List<Long> findDistinctIndexInfoIdsByDateRangeAndClosingPriceIsNotNull(
+		@Param("startDate") LocalDate startDate,
+		@Param("endDate") LocalDate endDate);
+
+	@Query("SELECT DISTINCT d.indexInfo.id FROM IndexData d " +
+		"WHERE d.baseDate = :targetDate " +
+		"AND d.closingPrice IS NOT NULL")
+	List<Long> findDistinctIndexInfoIdsByBaseDateAndClosingPriceIsNotNull(@Param("targetDate") LocalDate targetDate);
+
+	@Query("SELECT id FROM IndexData id " +
+		"LEFT JOIN FETCH id.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +
+		"WHERE id.indexInfo.id IN :indexInfoIds " +
+		"AND id.baseDate = :targetDate " +
+		"AND id.closingPrice IS NOT NULL")
+	List<IndexData> findAllByIndexInfoIdsAndBaseDateWithIndexInfo(
+		@Param("indexInfoIds") List<Long> indexInfoIds,
+		@Param("targetDate") LocalDate targetDate);
+
+	@Query("SELECT id FROM IndexData id " +
+		"LEFT JOIN FETCH id.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +
+		"WHERE id.indexInfo.id IN :indexInfoIds " +
+		"AND id.baseDate IN :dates " +
+		"AND id.closingPrice IS NOT NULL " +
+		"ORDER BY id.indexInfo.id, id.baseDate")
+	List<IndexData> findAllByIndexInfoIdsAndBaseDateInWithIndexInfo(
+		@Param("indexInfoIds") List<Long> indexInfoIds,
+		@Param("dates") List<LocalDate> dates);
 }

@@ -24,14 +24,6 @@ public class IndexPerformanceController {
 
 	private final IndexPerformanceService indexPerformanceService;
 
-	/**
-	 * 지수 성과 랭킹 조회
-	 *
-	 * @param indexInfoId 지수 정보 ID (선택)
-	 * @param periodTypeStr 성과 기간 유형 (DAILY, WEEKLY, MONTHLY)
-	 * @param limit 최대 랭킹 수
-	 * @return 성과 랭킹 목록
-	 */
 	@GetMapping("/performance/rank")
 	public ResponseEntity<List<IndexPerformanceRankResponse>> getPerformanceRanking(
 		@RequestParam(value = "indexInfoId", required = false) Long indexInfoId,
