@@ -1,5 +1,6 @@
 package com.codeit.findex.indexInfo.repository;
 
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,27 +11,26 @@ import org.springframework.data.repository.query.Param;
 import com.codeit.findex.indexInfo.domain.IndexInfo;
 
 public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long> {
-
 	@Query(
 		value = """
-        select i from IndexInfo i
-        where (:indexClassification is null or i.indexClassification like concat('%', cast(:indexClassification as string), '%'))
-            and (:indexName is null or i.indexName like concat('%', cast(:indexName as string), '%'))
-            and (:favorite is null or i.favorite = :favorite)
-            and (:cursor is null or
-                (:sortDirection = 'asc' and (i.indexClassification > :cursor or (i.indexClassification = :cursor and i.id > :idAfter))) or
-                (:sortDirection = 'desc' and (i.indexClassification < :cursor or (i.indexClassification = :cursor and i.id < :idAfter))))
-        order by 
-            case when :sortDirection = 'asc' then i.indexClassification end asc,
-            case when :sortDirection = 'desc' then i.indexClassification end desc,
-            i.id asc
-    """,
+			    select i from IndexInfo i
+			    where (:indexClassification is null or i.indexClassification like concat('%', cast(:indexClassification as string), '%'))
+			        and (:indexName is null or i.indexName like concat('%', cast(:indexName as string), '%'))
+			        and (:favorite is null or i.favorite = :favorite)
+			        and (:cursor is null or
+			            (:sortDirection = 'asc' and (i.indexClassification > :cursor or (i.indexClassification = :cursor and i.id > :idAfter))) or
+			            (:sortDirection = 'desc' and (i.indexClassification < :cursor or (i.indexClassification = :cursor and i.id < :idAfter))))
+			    order by 
+			        case when :sortDirection = 'asc' then i.indexClassification end asc,
+			        case when :sortDirection = 'desc' then i.indexClassification end desc,
+			        i.id asc
+			""",
 		countQuery = """
-        select count(i) from IndexInfo i
-        where (:indexClassification is null or i.indexClassification like concat('%', cast(:indexClassification as string), '%'))
-            and (:indexName is null or i.indexName like concat('%', cast(:indexName as string), '%'))
-            and (:favorite is null or i.favorite = :favorite)
-    """
+			    select count(i) from IndexInfo i
+			    where (:indexClassification is null or i.indexClassification like concat('%', cast(:indexClassification as string), '%'))
+			        and (:indexName is null or i.indexName like concat('%', cast(:indexName as string), '%'))
+			        and (:favorite is null or i.favorite = :favorite)
+			"""
 	)
 	Page<IndexInfo> findAllByIndexClassificationCursor(
 		@Param("indexClassification") String indexClassification,
@@ -57,11 +57,11 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long> {
             i.id asc
     """,
 		countQuery = """
-        select count(i) from IndexInfo i
-        where (:indexClassification is null or i.indexClassification like concat('%', cast(:indexClassification as string), '%'))
-            and (:indexName is null or i.indexName like concat('%', cast(:indexName as string), '%'))
-            and (:favorite is null or i.favorite = :favorite)
-    """
+			select count(i) from IndexInfo i
+			where (:indexClassification is null or i.indexClassification like concat('%', cast(:indexClassification as string), '%'))
+			    and (:indexName is null or i.indexName like concat('%', cast(:indexName as string), '%'))
+			    and (:favorite is null or i.favorite = :favorite)
+			"""
 	)
 	Page<IndexInfo> findAllByIndexNameCursor(
 		@Param("indexClassification") String indexClassification,
@@ -88,11 +88,11 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long> {
             i.id asc
     """,
 		countQuery = """
-        select count(i) from IndexInfo i
-        where (:indexClassification is null or i.indexClassification like concat('%', cast(:indexClassification as string), '%'))
-            and (:indexName is null or i.indexName like concat('%', cast(:indexName as string), '%'))
-            and (:favorite is null or i.favorite = :favorite)
-    """
+			select count(i) from IndexInfo i
+			where (:indexClassification is null or i.indexClassification like concat('%', cast(:indexClassification as string), '%'))
+			    and (:indexName is null or i.indexName like concat('%', cast(:indexName as string), '%'))
+			    and (:favorite is null or i.favorite = :favorite)
+			"""
 	)
 	Page<IndexInfo> findAllByEmployedItemsCountCursor(
 		@Param("indexClassification") String indexClassification,
@@ -103,4 +103,19 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long> {
 		@Param("sortDirection") String sortDirection,
 		Pageable pageable
 	);
+
+	Optional<IndexInfo> getIndexInfoById(Long id);
+
+	@Query("""
+		select count(i) from IndexInfo i
+		where (:indexClassification is null or i.indexClassification like concat('%', cast(:indexClassification as string), '%'))
+		    and (:indexName is null or i.indexName like concat('%', cast(:indexName as string), '%'))
+		    and (:favorite is null or i.favorite = :favorite)
+		""")
+	Long countByFilters(
+		@Param("indexClassification") String indexClassification,
+		@Param("indexName") String indexName,
+		@Param("favorite") Boolean favorite
+	);
 }
+

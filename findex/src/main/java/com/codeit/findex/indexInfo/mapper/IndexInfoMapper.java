@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import com.codeit.findex.indexInfo.domain.IndexInfo;
 import com.codeit.findex.indexInfo.dto.request.IndexInfoCreateRequestDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoCreateResponseDto;
+import com.codeit.findex.indexInfo.dto.response.IndexInfoGetByIdResponseDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoGetResponseDto;
 
 @Mapper(componentModel = "spring")
@@ -20,13 +21,13 @@ public interface IndexInfoMapper {
 
 	// IndexInfoGetResponseDto.IndexInfoDto toIndexInfoDto(IndexInfo indexInfo);
 
-	@Mapping(target = "content", source = "page.content")
-	@Mapping(target = "size", source = "page.size")
-	@Mapping(target = "totalElements", source = "page.totalElements")
-	@Mapping(target = "hasNext", expression = "java(page.hasNext())")
+	@Mapping(target = "content", source = "content")
+	@Mapping(target = "size", source = "size")
+	@Mapping(target = "totalElements", source = "totalElements")
+	@Mapping(target = "hasNext", source = "hasNext")
 	@Mapping(target = "nextCursor", source = "nextCursor")
 	@Mapping(target = "nextIdAfter", source = "nextIdAfter")
-	IndexInfoGetResponseDto toIndexInfoGetResponseDto(Page<IndexInfo> page, String nextCursor, String nextIdAfter);
+	IndexInfoGetResponseDto toIndexInfoGetResponseDto(List<IndexInfo> content, Integer size, Long totalElements, String nextCursor, String nextIdAfter, boolean hasNext);
 
 
 	@Mapping(target="id", ignore = true)
@@ -38,5 +39,8 @@ public interface IndexInfoMapper {
 
 
 	IndexInfoCreateResponseDto toIndexInfoCreateResponseDto(IndexInfo indexInfo);
+
+	IndexInfoGetByIdResponseDto toIndexInfoGetByIdResponseDto(IndexInfo indexInfo);
+
 }
 

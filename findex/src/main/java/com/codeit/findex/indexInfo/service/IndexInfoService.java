@@ -1,6 +1,9 @@
 package com.codeit.findex.indexInfo.service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,6 +15,7 @@ import com.codeit.findex.indexInfo.domain.IndexInfo;
 import com.codeit.findex.indexInfo.dto.request.IndexInfoCreateRequestDto;
 import com.codeit.findex.indexInfo.dto.request.IndexInfoGetRequestDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoCreateResponseDto;
+import com.codeit.findex.indexInfo.dto.response.IndexInfoGetByIdResponseDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoGetResponseDto;
 import com.codeit.findex.indexInfo.mapper.IndexInfoMapper;
 import com.codeit.findex.indexInfo.repository.IndexInfoRepository;
@@ -26,12 +30,18 @@ public class IndexInfoService {
 	private final IndexInfoMapper indexInfoMapper;
 
 	public IndexInfoGetResponseDto getIndexInfos(IndexInfoGetRequestDto dto){
-		Pageable pageable = PageRequest.of(0, dto.getSize());
+		Pageable pageable = PageRequest.of(0, dto.getSize() + 1);
 
 		Page<IndexInfo> indexInfosPage;
-		IndexInfo lastIndexInfo;
 		String nextCursor = null;
 		String nextIdAfter = null;
+		boolean hasNext = false;
+		List<IndexInfo> actualContent;
+		Long totalElements;
+
+		totalElements = indexInfoRepository.countByFilters(
+			dto.getIndexClassification(), dto.getIndexName(), dto.getFavorite()
+		);
 
 		switch (dto.getSortField()){
 			case "indexClassification":
@@ -39,12 +49,14 @@ public class IndexInfoService {
 					dto.getIndexClassification(), dto.getIndexName(), dto.getFavorite(), dto.getIdAfter(),
 					dto.getCursor(),dto.getSortDirection() ,pageable);
 
-				if (!indexInfosPage.getContent().isEmpty()) {
-					lastIndexInfo = indexInfosPage.getContent().get(indexInfosPage.getContent().size() - 1);
-					if(indexInfosPage.hasNext()) {
-						nextCursor = lastIndexInfo.getIndexClassification();
-						nextIdAfter = lastIndexInfo.getId().toString();
-					}
+				if (indexInfosPage.getContent().size() > dto.getSize()) {
+					hasNext = true;
+					actualContent = indexInfosPage.getContent().subList(0, dto.getSize());
+					IndexInfo lastIndexInfo = actualContent.get(actualContent.size() - 1);
+					nextCursor = lastIndexInfo.getIndexClassification();
+					nextIdAfter = lastIndexInfo.getId().toString();
+				} else {
+					actualContent = indexInfosPage.getContent();
 				}
 				break;
 
@@ -53,12 +65,14 @@ public class IndexInfoService {
 					dto.getIndexClassification(), dto.getIndexName(), dto.getFavorite(), dto.getIdAfter(),
 					dto.getCursor(),dto.getSortDirection(), pageable);
 
-				if (!indexInfosPage.getContent().isEmpty()) {
-					lastIndexInfo = indexInfosPage.getContent().get(indexInfosPage.getContent().size() - 1);
-					if(indexInfosPage.hasNext()) {
-						nextCursor = lastIndexInfo.getIndexName();
-						nextIdAfter = lastIndexInfo.getId().toString();
-					}
+				if (indexInfosPage.getContent().size() > dto.getSize()) {
+					hasNext = true;
+					actualContent = indexInfosPage.getContent().subList(0, dto.getSize());
+					IndexInfo lastIndexInfo = actualContent.get(actualContent.size() - 1);
+					nextCursor = lastIndexInfo.getIndexName();
+					nextIdAfter = lastIndexInfo.getId().toString();
+				} else {
+					actualContent = indexInfosPage.getContent();
 				}
 				break;
 
@@ -76,13 +90,15 @@ public class IndexInfoService {
 					dto.getIndexClassification(), dto.getIndexName(), dto.getFavorite(), dto.getIdAfter(),
 					employedItemsCountCursor,dto.getSortDirection(), pageable);
 
-				if (!indexInfosPage.getContent().isEmpty()) {
-					lastIndexInfo = indexInfosPage.getContent().get(indexInfosPage.getContent().size() - 1);
-					if(indexInfosPage.hasNext()) {
-						nextCursor = lastIndexInfo.getEmployedItemsCount() != null ?
-							lastIndexInfo.getEmployedItemsCount().toString() : null;
-						nextIdAfter = lastIndexInfo.getId().toString();
-					}
+				if (indexInfosPage.getContent().size() > dto.getSize()) {
+					hasNext = true;
+					actualContent = indexInfosPage.getContent().subList(0, dto.getSize());
+					IndexInfo lastIndexInfo = actualContent.get(actualContent.size() - 1);
+					nextCursor = lastIndexInfo.getEmployedItemsCount() != null ?
+						lastIndexInfo.getEmployedItemsCount().toString() : null;
+					nextIdAfter = lastIndexInfo.getId().toString();
+				} else {
+					actualContent = indexInfosPage.getContent();
 				}
 				break;
 
@@ -90,7 +106,7 @@ public class IndexInfoService {
 				throw new IllegalArgumentException("Invalid sort field: " + dto.getSortField());
 		}
 
-		return indexInfoMapper.toIndexInfoGetResponseDto(indexInfosPage, nextCursor, nextIdAfter);
+		return indexInfoMapper.toIndexInfoGetResponseDto(actualContent, dto.getSize(), totalElements, nextCursor, nextIdAfter, hasNext);
 	}
 
 	public IndexInfoCreateResponseDto saveIndexInfo(IndexInfoCreateRequestDto dto){
@@ -98,5 +114,11 @@ public class IndexInfoService {
 		return indexInfoMapper.toIndexInfoCreateResponseDto(indexInfo);
 	}
 
+	public IndexInfoGetByIdResponseDto getIndexInfoById(Integer id){
+		IndexInfo indexInfo = indexInfoRepository.getIndexInfoById(Long.valueOf(id))
+			.orElseThrow(NoSuchElementException::new);
+
+		return indexInfoMapper.toIndexInfoGetByIdResponseDto(indexInfo);
+	}
 
 }
