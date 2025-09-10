@@ -42,11 +42,13 @@ public class IndexDataQueryController {
 			try {
 				lastId = Long.parseLong(cursor);
 			} catch (NumberFormatException ignored) {
+				// 잘못된 cursor 값은 무시하고 첫 페이지로 처리
 			}
 		} else if (idAfter != null && !idAfter.trim().isEmpty()) {
 			try {
 				lastId = Long.parseLong(idAfter);
 			} catch (NumberFormatException ignored) {
+				// 잘못된 idAfter 값은 무시하고 첫 페이지로 처리
 			}
 		}
 

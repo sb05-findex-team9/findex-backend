@@ -1,6 +1,7 @@
 package com.codeit.findex.indexData.service;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -36,13 +37,23 @@ public class IndexDataQueryService {
 
 		Page<IndexData> result;
 		if (lastId != null) {
-			// 커서 기반 조회 - 정렬 방향에 따라 다른 조건 사용
-			if (direction == Sort.Direction.DESC) {
-				result = indexDataRepository.findIndexDataWithFiltersAfterIdDesc(
-					indexInfoId, startDate, endDate, lastId, pageable);
+			// 마지막 아이템의 baseDate 조회
+			Optional<IndexData> lastItem = indexDataRepository.findById(lastId);
+			if (lastItem.isPresent()) {
+				LocalDate lastBaseDate = lastItem.get().getBaseDate();
+
+				// 커서 기반 조회 - 정렬 방향에 따라 다른 조건 사용
+				if (direction == Sort.Direction.DESC) {
+					result = indexDataRepository.findIndexDataWithFiltersAfterIdDesc(
+						indexInfoId, startDate, endDate, lastBaseDate, lastId, pageable);
+				} else {
+					result = indexDataRepository.findIndexDataWithFiltersAfterIdAsc(
+						indexInfoId, startDate, endDate, lastBaseDate, lastId, pageable);
+				}
 			} else {
-				result = indexDataRepository.findIndexDataWithFiltersAfterIdAsc(
-					indexInfoId, startDate, endDate, lastId, pageable);
+				// lastId가 존재하지 않으면 첫 페이지로 처리
+				result = indexDataRepository.findIndexDataWithFilters(
+					indexInfoId, startDate, endDate, pageable);
 			}
 		} else {
 			// 첫 페이지 조회

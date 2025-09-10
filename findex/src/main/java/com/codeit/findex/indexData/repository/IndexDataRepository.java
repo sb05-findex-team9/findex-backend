@@ -35,34 +35,39 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("endDate") LocalDate endDate,
 		Pageable pageable);
 
+	// 수정된 메서드 - baseDate와 id를 모두 고려한 ASC 조회
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
 		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
 		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
 		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
-		"AND id.id > :lastId")
+		"AND (CAST(:lastBaseDate AS date) IS NULL OR id.baseDate > CAST(:lastBaseDate AS date) OR (id.baseDate = CAST(:lastBaseDate AS date) AND id.id > :lastId))")
 	Page<IndexData> findIndexDataWithFiltersAfterIdAsc(
 		@Param("indexInfoId") Long indexInfoId,
 		@Param("startDate") LocalDate startDate,
 		@Param("endDate") LocalDate endDate,
+		@Param("lastBaseDate") LocalDate lastBaseDate,
 		@Param("lastId") Long lastId,
 		Pageable pageable);
 
+	// 수정된 메서드 - baseDate와 id를 모두 고려한 DESC 조회
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
 		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
 		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
 		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
-		"AND id.id < :lastId")
+		"AND (CAST(:lastBaseDate AS date) IS NULL OR id.baseDate < CAST(:lastBaseDate AS date) OR (id.baseDate = CAST(:lastBaseDate AS date) AND id.id < :lastId))")
 	Page<IndexData> findIndexDataWithFiltersAfterIdDesc(
 		@Param("indexInfoId") Long indexInfoId,
 		@Param("startDate") LocalDate startDate,
 		@Param("endDate") LocalDate endDate,
+		@Param("lastBaseDate") LocalDate lastBaseDate,
 		@Param("lastId") Long lastId,
 		Pageable pageable);
 
+	// 기존 메서드들은 그대로 유지...
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
 		"LEFT JOIN FETCH ii.autoSyncConfig " +
@@ -89,6 +94,7 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("indexInfoId") Long indexInfoId,
 		@Param("baseDate") LocalDate baseDate);
 
+	// 나머지 메서드들도 동일하게 유지...
 	@Query("SELECT MAX(id.baseDate) FROM IndexData id")
 	Optional<LocalDate> findMaxBaseDate();
 
