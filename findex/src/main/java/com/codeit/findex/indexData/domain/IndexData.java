@@ -41,8 +41,9 @@ public class IndexData {
 	@Column(name = "base_date", nullable = false)
 	private LocalDate baseDate; // 기준일자 (basDt)
 
+	@Builder.Default
 	@Column(name="source_type", precision = 18, scale = 4)
-	private String sourceType; // 소스 타입
+	private String sourceType = "OPEN_API"; // 소스 타입
 
 	@Column(name = "market_price", precision = 18, scale = 4)
 	private BigDecimal marketPrice; // 시가 (mkp)

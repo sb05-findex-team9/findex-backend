@@ -55,8 +55,9 @@ public class IndexInfo {
 	@Column(name = "base_index", precision = 18, scale = 4)
 	private BigDecimal baseIndex; // 기준지수 (basIdx)
 
+	@Builder.Default
 	@Column(name = "source_type", length = 16)
-	private String sourceType;
+	private String sourceType = "OPEN_API";
 
 	@Builder.Default
 	@Column(name = "favorite")
