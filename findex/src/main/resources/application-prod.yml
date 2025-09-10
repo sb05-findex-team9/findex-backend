@@ -25,3 +25,10 @@ logging:
   level:
     org.hibernate.SQL: debug
     org.hibernate.orm.jdbc.bind: trace
+
+auto-sync:
+  scheduler:
+    enabled: true
+    #    cron: "*/20 * * * * *"   # 20초마다 test용
+    cron: "0 5 6 * * *"
+    zone: "Asia/Seoul"
