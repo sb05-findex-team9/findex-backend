@@ -1,5 +1,7 @@
 package com.codeit.findex.indexInfo.service;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -14,9 +16,11 @@ import org.springframework.stereotype.Service;
 import com.codeit.findex.indexInfo.domain.IndexInfo;
 import com.codeit.findex.indexInfo.dto.request.IndexInfoCreateRequestDto;
 import com.codeit.findex.indexInfo.dto.request.IndexInfoGetRequestDto;
+import com.codeit.findex.indexInfo.dto.request.IndexInfoUpdateRequestDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoCreateResponseDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoGetByIdResponseDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoGetResponseDto;
+import com.codeit.findex.indexInfo.dto.response.IndexInfoUpdateResponseDto;
 import com.codeit.findex.indexInfo.mapper.IndexInfoMapper;
 import com.codeit.findex.indexInfo.repository.IndexInfoRepository;
 
@@ -119,6 +123,34 @@ public class IndexInfoService {
 			.orElseThrow(NoSuchElementException::new);
 
 		return indexInfoMapper.toIndexInfoGetByIdResponseDto(indexInfo);
+	}
+
+	public void deleteIndexInfoById(Integer id){
+		IndexInfo indexInfoOptional = indexInfoRepository.getIndexInfoById(Long.valueOf(id)).orElseThrow(NoSuchElementException::new);
+		indexInfoRepository.delete(indexInfoOptional);
+	}
+
+	public IndexInfoUpdateResponseDto updateIndexInfo(Integer id, IndexInfoUpdateRequestDto dto){
+		IndexInfo originIndexInfo = indexInfoRepository.getIndexInfoById(Long.valueOf(id))
+			.orElseThrow(NoSuchElementException::new);
+
+		if (dto.getEmployedItemsCount() != null) {
+			originIndexInfo.setEmployedItemsCount(dto.getEmployedItemsCount());
+		}
+		if (dto.getBasePointInTime() != null) {
+			originIndexInfo.setBasePointInTime(LocalDate.parse(dto.getBasePointInTime()));
+		}
+		if (dto.getBaseIndex() != null) {
+			originIndexInfo.setBaseIndex(BigDecimal.valueOf(dto.getBaseIndex()));
+		}
+		if (dto.getFavorite() != null) {
+			originIndexInfo.setFavorite(dto.getFavorite());
+		}
+
+		IndexInfo updatedIndexInfo = indexInfoRepository.save(originIndexInfo);
+
+		return indexInfoMapper.toIndexInfoUpdateResponseDto(
+			updatedIndexInfo);
 	}
 
 }

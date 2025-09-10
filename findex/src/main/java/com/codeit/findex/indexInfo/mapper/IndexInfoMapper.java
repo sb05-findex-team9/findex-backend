@@ -15,6 +15,7 @@ import com.codeit.findex.indexInfo.dto.request.IndexInfoCreateRequestDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoCreateResponseDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoGetByIdResponseDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoGetResponseDto;
+import com.codeit.findex.indexInfo.dto.response.IndexInfoUpdateResponseDto;
 
 @Mapper(componentModel = "spring")
 public interface IndexInfoMapper {
@@ -42,5 +43,6 @@ public interface IndexInfoMapper {
 
 	IndexInfoGetByIdResponseDto toIndexInfoGetByIdResponseDto(IndexInfo indexInfo);
 
+	IndexInfoUpdateResponseDto toIndexInfoUpdateResponseDto(IndexInfo indexInfo);
 }
 
