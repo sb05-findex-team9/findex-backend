@@ -1,6 +1,7 @@
 package com.codeit.findex.indexData.repository;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,9 +20,12 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
 		"AND (:idAfter IS NULL OR id.id > :idAfter)")
 	Page<IndexData> findIndexDataWithFilters(
-		@Param("indexInfoId") Long indexInfoId,
+		@Param("indexInfoId") Integer indexInfoId,
 		@Param("startDate") LocalDate startDate,
 		@Param("endDate") LocalDate endDate,
-		@Param("idAfter") Long idAfter,
+		@Param("idAfter") Integer idAfter,
 		Pageable pageable);
+
+	Optional<IndexData> findTopByIndexInfoIdAndBaseDateLessThanOrderByBaseDateDesc(
+		Integer indexInfoId, LocalDate baseDate);
 }

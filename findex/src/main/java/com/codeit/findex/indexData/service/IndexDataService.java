@@ -1,5 +1,7 @@
 package com.codeit.findex.indexData.service;
 
+import static java.time.LocalDate.*;
+
 import java.time.LocalDate;
 
 import org.springframework.data.domain.Page;
@@ -21,8 +23,11 @@ public class IndexDataService {
 	private final IndexDataRepository indexDataRepository;
 
 	// 지수 데이터 목록 조회
-	public Page<IndexData> getIndexDataList(Long indexInfoId, LocalDate startDate, LocalDate endDate,
-		Long idAfter, String sortField, String sortDirection, int size) {
+	public Page<IndexData> getIndexDataList(Integer indexInfoId, String startDate, String endDate,
+		Integer idAfter, String sortField, String sortDirection, Integer size) {
+
+		LocalDate startLocalDate = parseDate(startDate);
+		LocalDate endLocalDate = parseDate(endDate);
 
 		// 정렬 방향 설정
 		Sort.Direction direction = "desc".equalsIgnoreCase(sortDirection)
@@ -35,21 +40,27 @@ public class IndexDataService {
 		Pageable pageable = PageRequest.of(0, size, sort);
 
 		return indexDataRepository.findIndexDataWithFilters(
-			indexInfoId, startDate, endDate, idAfter, pageable);
+			indexInfoId, startLocalDate, endLocalDate, idAfter, pageable);
+	}
+
+	private LocalDate parseDate(String dateString) {
+		if (dateString == null || dateString.trim().isEmpty()) {
+			return null;
+		}
+		try {
+			return LocalDate.parse(dateString);
+		} catch (Exception e) {
+			return null;
+		}
 	}
 
 	private String mapSortField(String apiSortField) {
-		switch (apiSortField) {
-			case "indexClassification":
-				return "indexInfo.indexClassification"; // Join 필드
-			case "indexName":
-				return "indexInfo.indexName"; // Join 필드
-			case "employedItemsCount":
-				return "indexInfo.employedItemsCount"; // Join 필드
-			case "baseDate":
-				return "baseDate";
-			default:
-				return "id"; // 기본값
-		}
+		return switch (apiSortField) {
+			case "indexClassification" -> "indexInfo.indexClassification"; // Join 필드
+			case "indexName" -> "indexInfo.indexName"; // Join 필드
+			case "employedItemsCount" -> "indexInfo.employedItemsCount"; // Join 필드
+			case "baseDate" -> "baseDate";
+			default -> "id"; // 기본값
+		};
 	}
 }
