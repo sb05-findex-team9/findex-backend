@@ -15,17 +15,26 @@ import com.codeit.findex.indexData.domain.IndexData;
 import com.codeit.findex.indexData.domain.PeriodType;
 import com.codeit.findex.indexData.dto.IndexChartResponse;
 import com.codeit.findex.indexData.repository.IndexDataRepository;
+import com.codeit.findex.indexInfo.domain.IndexInfo;
+import com.codeit.findex.indexInfo.repository.IndexInfoRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class IndexChartService {
 	private final IndexDataRepository indexDataRepository;
+	private final IndexInfoRepository indexInfoRepository;
 	private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
 	public IndexChartResponse getIndexChartData(Long indexInfoId, PeriodType periodType) {
+		// IndexInfo 존재 여부 확인
+		IndexInfo indexInfo = indexInfoRepository.findById(indexInfoId)
+			.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 지수 정보 ID입니다: " + indexInfoId));
+
 		// 기간 계산
 		LocalDate startDate = calculateStartDate(periodType);
 
@@ -35,21 +44,28 @@ public class IndexChartService {
 			: indexDataRepository.findByIndexInfoIdOrderByBaseDateAsc(indexInfoId);
 
 		if (indexDataList.isEmpty()) {
-			throw new IllegalArgumentException("해당 지수 정보에 대한 데이터가 없습니다.");
+			log.warn("지수 데이터가 없습니다. indexInfoId: {}, periodType: {}", indexInfoId, periodType);
+			return IndexChartResponse.builder()
+				.indexInfoId(indexInfoId)
+				.indexClassification(indexInfo.getIndexClassification())
+				.indexName(indexInfo.getIndexName())
+				.periodType(periodType != null ? periodType.name() : "ALL")
+				.dataPoints(new ArrayList<>())
+				.ma5DataPoints(new ArrayList<>())
+				.ma20DataPoints(new ArrayList<>())
+				.build();
 		}
 
-		// 지수 정보 조회
-		var indexInfo = indexDataList.get(0).getIndexInfo();
-
-		// 기간별 데이터 필터링
 		List<IndexData> filteredData = filterDataByPeriod(indexDataList, periodType);
 
 		// 차트 데이터 생성
 		List<IndexChartResponse.DataPoint> dataPoints = createDataPoints(filteredData);
 
-		// 이동평균선 계산
-		List<IndexChartResponse.DataPoint> ma5DataPoints = calculateMovingAverage(indexDataList, 5);
-		List<IndexChartResponse.DataPoint> ma20DataPoints = calculateMovingAverage(indexDataList, 20);
+		List<IndexChartResponse.DataPoint> ma5DataPoints = calculateMovingAverage(indexDataList, 5, startDate);
+		List<IndexChartResponse.DataPoint> ma20DataPoints = calculateMovingAverage(indexDataList, 20, startDate);
+
+		log.info("차트 데이터 조회 완료. indexInfoId: {}, periodType: {}, dataPoints: {}",
+			indexInfoId, periodType, dataPoints.size());
 
 		return IndexChartResponse.builder()
 			.indexInfoId(indexInfoId)
@@ -80,20 +96,22 @@ public class IndexChartService {
 
 		LocalDate startDate = calculateStartDate(periodType);
 		return dataList.stream()
-			.filter(data -> !data.getBaseDate().isBefore(startDate))
+			.filter(data -> data.getBaseDate() != null && !data.getBaseDate().isBefore(startDate))
 			.collect(Collectors.toList());
 	}
 
 	private List<IndexChartResponse.DataPoint> createDataPoints(List<IndexData> dataList) {
 		return dataList.stream()
+			.filter(data -> data.getClosingPrice() != null) // null 체크 추가
 			.map(data -> IndexChartResponse.DataPoint.builder()
 				.date(data.getBaseDate().format(DATE_FORMATTER))
-				.value(data.getClosingPrice() != null ? data.getClosingPrice().floatValue() : 0f)
+				.value(data.getClosingPrice().floatValue())
 				.build())
 			.collect(Collectors.toList());
 	}
 
-	private List<IndexChartResponse.DataPoint> calculateMovingAverage(List<IndexData> dataList, int period) {
+	private List<IndexChartResponse.DataPoint> calculateMovingAverage(List<IndexData> dataList, int period,
+		LocalDate startDate) {
 		List<IndexChartResponse.DataPoint> maDataPoints = new ArrayList<>();
 
 		if (dataList.size() < period) {
@@ -113,11 +131,15 @@ public class IndexChartService {
 			}
 
 			if (count > 0) {
-				float average = sum.divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP).floatValue();
-				maDataPoints.add(IndexChartResponse.DataPoint.builder()
-					.date(dataList.get(i).getBaseDate().format(DATE_FORMATTER))
-					.value(average)
-					.build());
+				// startDate가 있는 경우 해당 기간 이후 데이터만 포함
+				LocalDate currentDate = dataList.get(i).getBaseDate();
+				if (startDate == null || !currentDate.isBefore(startDate)) {
+					float average = sum.divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP).floatValue();
+					maDataPoints.add(IndexChartResponse.DataPoint.builder()
+						.date(currentDate.format(DATE_FORMATTER))
+						.value(average)
+						.build());
+				}
 			}
 		}
 

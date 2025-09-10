@@ -23,9 +23,9 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/index-data")
 @RequiredArgsConstructor
 public class IndexDataQueryController {
+
 	private final IndexDataQueryService indexDataQueryService;
 
-	// 지수 데이터 목록 조회
 	@GetMapping
 	public ResponseEntity<PagedResponseDto<IndexDataResponseDto>> getIndexDataList(
 		@RequestParam(required = false) Long indexInfoId,

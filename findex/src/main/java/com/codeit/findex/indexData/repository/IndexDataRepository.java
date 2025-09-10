@@ -15,7 +15,6 @@ import com.codeit.findex.indexInfo.domain.IndexInfo;
 
 public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 
-
 	@Query("select d.baseDate from IndexData d " +
 		"where d.indexInfo = :indexInfo and d.baseDate in :dates")
 	List<LocalDate> findExistingDates(@Param("indexInfo") IndexInfo indexInfo,
@@ -61,12 +60,28 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("lastId") Long lastId,
 		Pageable pageable);
 
-	List<IndexData> findByIndexInfoIdAndBaseDateGreaterThanEqualOrderByBaseDateAsc(Long indexInfoId,
-		LocalDate startDate);
+	@Query("SELECT id FROM IndexData id " +
+		"LEFT JOIN FETCH id.indexInfo ii " +
+		"WHERE id.indexInfo.id = :indexInfoId " +
+		"AND id.baseDate >= :startDate " +
+		"ORDER BY id.baseDate ASC")
+	List<IndexData> findByIndexInfoIdAndBaseDateGreaterThanEqualOrderByBaseDateAsc(
+		@Param("indexInfoId") Long indexInfoId,
+		@Param("startDate") LocalDate startDate);
 
-	List<IndexData> findByIndexInfoIdOrderByBaseDateAsc(Long indexInfoId);
+	@Query("SELECT id FROM IndexData id " +
+		"LEFT JOIN FETCH id.indexInfo ii " +
+		"WHERE id.indexInfo.id = :indexInfoId " +
+		"ORDER BY id.baseDate ASC")
+	List<IndexData> findByIndexInfoIdOrderByBaseDateAsc(@Param("indexInfoId") Long indexInfoId);
 
-	Optional<IndexData> findByIndexInfoIdAndBaseDate(Long indexInfoId, LocalDate baseDate);
+	@Query("SELECT id FROM IndexData id " +
+		"LEFT JOIN FETCH id.indexInfo ii " +
+		"WHERE id.indexInfo.id = :indexInfoId " +
+		"AND id.baseDate = :baseDate")
+	Optional<IndexData> findByIndexInfoIdAndBaseDate(
+		@Param("indexInfoId") Long indexInfoId,
+		@Param("baseDate") LocalDate baseDate);
 
 	@Query("SELECT MAX(id.baseDate) FROM IndexData id")
 	Optional<LocalDate> findMaxBaseDate();
@@ -74,4 +89,16 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 	@Query("SELECT MAX(id.baseDate) FROM IndexData id WHERE id.indexInfo.id = :indexInfoId")
 	Optional<LocalDate> findMaxBaseDateByIndexInfoId(@Param("indexInfoId") Long indexInfoId);
 
+	@Query("SELECT id FROM IndexData id " +
+		"LEFT JOIN FETCH id.indexInfo ii " +
+		"WHERE id.baseDate = :targetDate " +
+		"AND id.closingPrice IS NOT NULL")
+	List<IndexData> findAllByBaseDateWithIndexInfo(@Param("targetDate") LocalDate targetDate);
+
+	@Query("SELECT id FROM IndexData id " +
+		"LEFT JOIN FETCH id.indexInfo ii " +
+		"WHERE id.baseDate IN :dates " +
+		"AND id.closingPrice IS NOT NULL " +
+		"ORDER BY id.indexInfo.id, id.baseDate")
+	List<IndexData> findAllByBaseDateInWithIndexInfo(@Param("dates") List<LocalDate> dates);
 }
