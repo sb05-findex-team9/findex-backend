@@ -54,19 +54,12 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("lastId") Long lastId,
 		Pageable pageable);
 
-	Optional<IndexData> findTopByIndexInfoIdAndBaseDateLessThanOrderByBaseDateDesc(
-		Long indexInfoId, LocalDate baseDate);
-
 	List<IndexData> findByIndexInfoIdAndBaseDateGreaterThanEqualOrderByBaseDateAsc(Long indexInfoId,
 		LocalDate startDate);
 
 	List<IndexData> findByIndexInfoIdOrderByBaseDateAsc(Long indexInfoId);
 
 	Optional<IndexData> findByIndexInfoIdAndBaseDate(Long indexInfoId, LocalDate baseDate);
-
-	List<IndexData> findAllByBaseDate(LocalDate baseDate);
-
-	List<IndexData> findByIndexInfoIdOrderByBaseDateDesc(Long indexInfoId);
 
 	@Query("SELECT MAX(id.baseDate) FROM IndexData id")
 	Optional<LocalDate> findMaxBaseDate();
