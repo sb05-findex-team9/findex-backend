@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS sync_jobs;
 DROP TABLE IF EXISTS auto_sync_configs;
 DROP TABLE IF EXISTS index_infos;
 
+
 -- =========================
 -- index_infos (master)
 -- =========================
@@ -94,11 +95,4 @@ CREATE INDEX idx_index_infos_classification ON index_infos (index_classification
 CREATE INDEX idx_index_infos_name           ON index_infos (index_name);
 CREATE INDEX idx_index_infos_favorite       ON index_infos (favorite);
 
--- =========================
--- Sample data (optional)
--- =========================
--- INSERT INTO index_infos
---   (index_name, index_classification, employed_items_count, base_point_in_time, base_index, favorite)
--- VALUES
---   ('IT 서비스', 'KOSPI시리즈', 200, '2000-01-01', 1000.0, true),
---   ('반도체',    'KOSPI시리즈', 150, '2000-01-01', 1000.0, false);
+
