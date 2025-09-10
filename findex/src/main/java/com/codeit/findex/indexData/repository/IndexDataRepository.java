@@ -11,8 +11,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.codeit.findex.indexData.domain.IndexData;
+import com.codeit.findex.indexInfo.domain.IndexInfo;
 
 public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
+
+
+	@Query("select d.baseDate from IndexData d " +
+		"where d.indexInfo = :indexInfo and d.baseDate in :dates")
+	List<LocalDate> findExistingDates(@Param("indexInfo") IndexInfo indexInfo,
+		@Param("dates") List<LocalDate> dates);
 
 	// 기본 조회 (첫 페이지)
 	@Query("SELECT id FROM IndexData id " +

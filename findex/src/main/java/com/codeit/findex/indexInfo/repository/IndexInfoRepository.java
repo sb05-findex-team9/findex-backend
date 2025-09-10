@@ -1,5 +1,6 @@
 package com.codeit.findex.indexInfo.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -100,5 +101,8 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long> {
 		@Param("indexName") String indexName,
 		@Param("favorite") Boolean favorite
 	);
+
+	List<IndexInfo> findByIndexNameAndIndexClassification(String indexName, String indexClassification);
+
 }
 

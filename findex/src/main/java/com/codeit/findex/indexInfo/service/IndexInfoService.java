@@ -111,7 +111,7 @@ public class IndexInfoService {
 
 
 	public IndexInfoCreateResponseDto saveIndexInfo(IndexInfoCreateRequestDto dto){
-		IndexInfo indexInfo = indexInfoRepository.save(indexInfoMapper.toIndexInfo(dto));
+		IndexInfo indexInfo = indexInfoRepository.save(indexInfoMapper.toIndexInfo(dto, "USER"));
 		return indexInfoMapper.toIndexInfoCreateResponseDto(indexInfo);
 	}
 

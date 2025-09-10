@@ -19,10 +19,10 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.codeit.findex.common.openapi.dto.ApiResponseDto;
-import com.codeit.findex.common.openapi.entity.ApiIndexData;
-import com.codeit.findex.common.openapi.entity.ApiIndexInfo;
-import com.codeit.findex.common.openapi.repository.ApiIndexDataRepository;
-import com.codeit.findex.common.openapi.repository.ApiIndexInfoRepository;
+import com.codeit.findex.indexData.domain.IndexData;
+import com.codeit.findex.indexData.repository.IndexDataRepository;
+import com.codeit.findex.indexInfo.domain.IndexInfo;
+import com.codeit.findex.indexInfo.repository.IndexInfoRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,8 +30,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ApiIndexDataService {
 
-	private final ApiIndexDataRepository indexDataRepository;
-	private final ApiIndexInfoRepository indexInfoRepository;
+	private final IndexDataRepository indexDataRepository;
+	private final IndexInfoRepository indexInfoRepository;
 	private final RestTemplate restTemplate = new RestTemplate();
 
 	@Value("${api.service-key}")
@@ -109,8 +109,8 @@ public class ApiIndexDataService {
 		if (items == null || items.isEmpty())
 			return 0;
 
-		Map<String, ApiIndexInfo> infoCache = new HashMap<>();
-		List<ApiIndexData> batch = new ArrayList<>();
+		Map<String, IndexInfo> infoCache = new HashMap<>();
+		List<IndexData> batch = new ArrayList<>();
 
 		for (ApiResponseDto.Item item : items) {
 			LocalDate baseDate = parseDate(item.getBasDt());
@@ -118,12 +118,12 @@ public class ApiIndexDataService {
 
 			String key = item.getIdxNm() + "_" + item.getIdxCsf();
 
-			ApiIndexInfo indexInfo = infoCache.computeIfAbsent(key, k -> {
-				List<ApiIndexInfo> found = indexInfoRepository.findByIndexNameAndIndexClassification(
+			IndexInfo indexInfo = infoCache.computeIfAbsent(key, k -> {
+				List<IndexInfo> found = indexInfoRepository.findByIndexNameAndIndexClassification(
 					item.getIdxNm(), item.getIdxCsf());
 
 				if (found.isEmpty()) {
-					ApiIndexInfo newInfo = ApiIndexInfo.builder()
+					IndexInfo newInfo = IndexInfo.builder()
 						.indexName(item.getIdxNm())
 						.indexClassification(item.getIdxCsf())
 						.employedItemsCount(parseInteger(item.getEpyItmsCnt()))
@@ -136,35 +136,35 @@ public class ApiIndexDataService {
 				}
 			});
 
-			batch.add(ApiIndexData.builder()
+			batch.add(IndexData.builder()
 				.indexInfo(indexInfo)
 				.baseDate(baseDate)
 				.closingPrice(parseBigDecimal(item.getClpr()))
-				.priceChange(parseBigDecimal(item.getVs()))
+				.versus(parseBigDecimal(item.getVs()))
 				.fluctuationRate(parseBigDecimal(item.getFltRt()))
 				.marketPrice(parseBigDecimal(item.getMkp()))
 				.highPrice(parseBigDecimal(item.getHipr()))
 				.lowPrice(parseBigDecimal(item.getLopr()))
-				.tradingVolume(parseLong(item.getTrqu()))
-				.transactionPrice(parseBigDecimal(item.getTrPrc()))
-				.marketCap(parseBigDecimal(item.getLstgMrktTotAmt()))
+				.tradingQuantity(parseLong(item.getTrqu()))
+				.tradingPrice(parseBigDecimal(item.getTrPrc()))
+				.marketTotalAmount(parseBigDecimal(item.getLstgMrktTotAmt()))
 				.build());
 		}
 
-		Map<ApiIndexInfo, List<LocalDate>> datesByInfo = batch.stream()
-			.collect(Collectors.groupingBy(ApiIndexData::getIndexInfo,
-				Collectors.mapping(ApiIndexData::getBaseDate, Collectors.toList())));
+		Map<IndexInfo, List<LocalDate>> datesByInfo = batch.stream()
+			.collect(Collectors.groupingBy(IndexData::getIndexInfo,
+				Collectors.mapping(IndexData::getBaseDate, Collectors.toList())));
 
 		Set<String> existingKeys = new HashSet<>();
-		for (Map.Entry<ApiIndexInfo, List<LocalDate>> entry : datesByInfo.entrySet()) {
-			ApiIndexInfo info = entry.getKey();
+		for (Map.Entry<IndexInfo, List<LocalDate>> entry : datesByInfo.entrySet()) {
+			IndexInfo info = entry.getKey();
 			List<LocalDate> dates = entry.getValue();
 			List<LocalDate> existingDates =
 				indexDataRepository.findExistingDates(info, dates);
 			existingDates.forEach(d -> existingKeys.add(info.getId() + "_" + d));
 		}
 
-		List<ApiIndexData> toInsert = batch.stream()
+		List<IndexData> toInsert = batch.stream()
 			.filter(d -> !existingKeys.contains(d.getIndexInfo().getId() + "_" + d.getBaseDate()))
 			.toList();
 

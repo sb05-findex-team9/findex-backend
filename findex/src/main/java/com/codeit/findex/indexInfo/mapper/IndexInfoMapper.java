@@ -1,14 +1,9 @@
 package com.codeit.findex.indexInfo.mapper;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.factory.Mappers;
-import org.springframework.data.domain.Page;
 
 import com.codeit.findex.indexInfo.domain.IndexInfo;
 import com.codeit.findex.indexInfo.dto.request.IndexInfoCreateRequestDto;
@@ -21,7 +16,6 @@ import com.codeit.findex.indexInfo.dto.response.IndexInfoUpdateResponseDto;
 @Mapper(componentModel = "spring")
 public interface IndexInfoMapper {
 
-	// IndexInfoGetResponseDto.IndexInfoDto toIndexInfoDto(IndexInfo indexInfo);
 
 	@Mapping(target = "content", source = "content")
 	@Mapping(target = "size", source = "size")
@@ -36,8 +30,8 @@ public interface IndexInfoMapper {
 	@Mapping(target="indexData", ignore = true)
 	@Mapping(target="autoSyncConfig", ignore = true)
 	@Mapping(target="syncJobs", ignore = true)
-	@Mapping(target="sourceType", ignore = true)
-	IndexInfo toIndexInfo(IndexInfoCreateRequestDto dto);
+	@Mapping(target="sourceType", source="sourceType")
+	IndexInfo toIndexInfo(IndexInfoCreateRequestDto dto, String sourceType);
 
 
 	IndexInfoCreateResponseDto toIndexInfoCreateResponseDto(IndexInfo indexInfo);

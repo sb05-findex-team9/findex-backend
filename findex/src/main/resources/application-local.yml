@@ -3,10 +3,9 @@ spring:
     name: findex
   datasource:
     url: jdbc:postgresql://localhost:5432/findex
-    username: postgres
-    password: 1234
+    username: findex_user
+    password: findex1234
     driver-class-name: org.postgresql.Driver
-
   jpa:
     hibernate:
       ddl-auto: validate
@@ -28,5 +27,5 @@ logging:
 
 # API
 api:
-  service-key: ${API_SERVICE_KEY}
-  stock-url: ${API_URL}
+  service-key: '4e45f20039574765ef0b52364e6ba488dde012627aef89847dccacb39fb77f0d'
+  stock-url: 'https://apis.data.go.kr/1160100/service/GetMarketIndexInfoService/getStockMarketIndex'

@@ -13,8 +13,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.codeit.findex.common.openapi.dto.ApiResponseDto;
-import com.codeit.findex.common.openapi.entity.ApiIndexInfo;
-import com.codeit.findex.common.openapi.repository.ApiIndexInfoRepository;
+import com.codeit.findex.indexInfo.domain.IndexInfo;
+import com.codeit.findex.indexInfo.repository.IndexInfoRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ApiIndexInfoService {
 
-	private final ApiIndexInfoRepository indexInfoRepository;
+	private final IndexInfoRepository indexInfoRepository;
 	private final RestTemplate restTemplate = new RestTemplate();
 
 	@Value("${api.service-key}")
@@ -63,14 +63,14 @@ public class ApiIndexInfoService {
 		String indexName = item.getIdxNm();
 		String indexClassification = item.getIdxCsf();
 
-		Optional<ApiIndexInfo> existingInfo = indexInfoRepository
+		Optional<IndexInfo> existingInfo = indexInfoRepository
 			.findByIndexNameAndIndexClassification(indexName, indexClassification).stream().findFirst();
 
 		if (existingInfo.isPresent()) {
 			return;
 		}
 
-		ApiIndexInfo indexInfo = ApiIndexInfo.builder()
+		IndexInfo indexInfo = IndexInfo.builder()
 			.indexName(indexName)
 			.indexClassification(indexClassification)
 			.employedItemsCount(parseInteger(item.getEpyItmsCnt()))

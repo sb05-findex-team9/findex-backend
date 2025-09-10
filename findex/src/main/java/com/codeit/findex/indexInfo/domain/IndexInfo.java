@@ -40,27 +40,27 @@ public class IndexInfo {
 	@Column(name = "id")
 	private Long id;
 
-	@Column(name = "index_name", length = 240, nullable = false)
-	private String indexName;
+	@Column(name = "index_name", nullable = false, unique = true, length = 240)
+	private String indexName; // 지수명 (idxNm)
 
 	@Column(name = "index_classification", length = 20)
-	private String indexClassification;
+	private String indexClassification; // 지수분류명 (idxCsf)
 
 	@Column(name = "employed_items_count")
-	private Integer employedItemsCount;
+	private Integer employedItemsCount; // 채용종목 수 (epyItmsCnt)
 
 	@Column(name = "base_point_in_time")
-	private LocalDate basePointInTime;
+	private LocalDate basePointInTime; // 기준시점 (basPntm)
 
 	@Column(name = "base_index", precision = 18, scale = 4)
-	private BigDecimal baseIndex;
+	private BigDecimal baseIndex; // 기준지수 (basIdx)
+
+	@Column(name = "source_type", length = 16)
+	private String sourceType;
 
 	@Builder.Default
-	@Column(name = "source_type", length = 16)
-	private String sourceType = "user";
-
 	@Column(name = "favorite")
-	private Boolean favorite;
+	private Boolean favorite = false;
 
 	//
 	@OneToMany(mappedBy = "indexInfo", orphanRemoval = true, cascade = {CascadeType.ALL})
