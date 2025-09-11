@@ -27,13 +27,13 @@ logging:
 
 # scheduler
 # 전체 수집 스케줄러
-findex:
-  scheduler:
-    fullfetch:
-      enabled: true
-      run-on-startup: true
-      cron: "0 0 6 * * *"   # 원하는 시간
-      zone: "Asia/Seoul"
+#findex:
+#  scheduler:
+#    fullfetch:
+#      enabled: true
+#      run-on-startup: true
+#      cron: "0 0 6 * * *"   # 원하는 시간
+#      zone: "Asia/Seoul"
 
 # 자동 연동 스케줄러
 auto-sync:
