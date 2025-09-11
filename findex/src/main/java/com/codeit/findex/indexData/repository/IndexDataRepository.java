@@ -198,4 +198,6 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("endDate") LocalDate endDate,
 		Sort sort);
 
+	List<IndexData> findByIndexInfoIdAndBaseDateBetween(Long indexInfoId, LocalDate startDate, LocalDate endDate);
+
 }
