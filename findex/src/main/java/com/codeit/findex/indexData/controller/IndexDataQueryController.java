@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/index-data")
 @RequiredArgsConstructor
 public class IndexDataQueryController {
+
 	private final IndexDataQueryService indexDataQueryService;
 
 	// 지수 데이터 목록 조회

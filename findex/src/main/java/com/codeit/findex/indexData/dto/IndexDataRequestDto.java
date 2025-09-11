@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.util.StringUtils;
 
 import com.codeit.findex.indexData.domain.IndexData;
 import com.codeit.findex.indexInfo.domain.IndexInfo;
@@ -33,10 +34,13 @@ public class IndexDataRequestDto {
 	private Double marketTotalAmount;
 
 	public IndexData toEntity(IndexInfo indexInfo) {
+		// sourceType이 null이거나 빈 문자열인 경우 기본값 설정
+		String finalSourceType = StringUtils.hasText(this.sourceType) ? this.sourceType : "OPEN_API";
+
 		return IndexData.builder()
 			.indexInfo(indexInfo)
 			.baseDate(this.baseDate)
-			.sourceType(this.sourceType)
+			.sourceType(finalSourceType)
 			.marketPrice(this.marketPrice != null ? BigDecimal.valueOf(this.marketPrice) : null)
 			.closingPrice(this.closingPrice != null ? BigDecimal.valueOf(this.closingPrice) : null)
 			.highPrice(this.highPrice != null ? BigDecimal.valueOf(this.highPrice) : null)

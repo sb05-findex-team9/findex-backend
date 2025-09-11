@@ -1,6 +1,7 @@
 package com.codeit.findex.indexData.service;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,29 +24,33 @@ public class IndexDataQueryService {
 	public Page<IndexData> getIndexDataList(Long indexInfoId, LocalDate startDate, LocalDate endDate,
 		Long lastId, String sortField, String sortDirection, Integer size) {
 
-		// 정렬 방향 설정
 		Sort.Direction direction = "desc".equalsIgnoreCase(sortDirection)
 			? Sort.Direction.DESC
 			: Sort.Direction.ASC;
 
 		String entitySortField = mapSortField(sortField);
 
-		// 보조 정렬로 ID 추가 (중복 값이 있을 때 일관성 보장)
 		Sort sort = Sort.by(direction, entitySortField).and(Sort.by(Sort.Direction.ASC, "id"));
 		Pageable pageable = PageRequest.of(0, size, sort);
 
 		Page<IndexData> result;
 		if (lastId != null) {
-			// 커서 기반 조회 - 정렬 방향에 따라 다른 조건 사용
-			if (direction == Sort.Direction.DESC) {
-				result = indexDataRepository.findIndexDataWithFiltersAfterIdDesc(
-					indexInfoId, startDate, endDate, lastId, pageable);
+			Optional<IndexData> lastItem = indexDataRepository.findById(lastId);
+			if (lastItem.isPresent()) {
+				LocalDate lastBaseDate = lastItem.get().getBaseDate();
+
+				if (direction == Sort.Direction.DESC) {
+					result = indexDataRepository.findIndexDataWithFiltersAfterIdDesc(
+						indexInfoId, startDate, endDate, lastBaseDate, lastId, pageable);
+				} else {
+					result = indexDataRepository.findIndexDataWithFiltersAfterIdAsc(
+						indexInfoId, startDate, endDate, lastBaseDate, lastId, pageable);
+				}
 			} else {
-				result = indexDataRepository.findIndexDataWithFiltersAfterIdAsc(
-					indexInfoId, startDate, endDate, lastId, pageable);
+				result = indexDataRepository.findIndexDataWithFilters(
+					indexInfoId, startDate, endDate, pageable);
 			}
 		} else {
-			// 첫 페이지 조회
 			result = indexDataRepository.findIndexDataWithFilters(
 				indexInfoId, startDate, endDate, pageable);
 		}

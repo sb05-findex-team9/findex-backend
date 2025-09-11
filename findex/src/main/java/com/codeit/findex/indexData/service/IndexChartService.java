@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,41 +16,43 @@ import com.codeit.findex.indexData.domain.IndexData;
 import com.codeit.findex.indexData.domain.PeriodType;
 import com.codeit.findex.indexData.dto.IndexChartResponse;
 import com.codeit.findex.indexData.repository.IndexDataRepository;
+import com.codeit.findex.indexInfo.domain.IndexInfo;
+import com.codeit.findex.indexInfo.repository.IndexInfoRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class IndexChartService {
 	private final IndexDataRepository indexDataRepository;
+	private final IndexInfoRepository indexInfoRepository;
 	private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
+	@Cacheable(value = "indexChart", key = "#indexInfoId + '_' + (#periodType != null ? #periodType.name() : 'ALL')")
 	public IndexChartResponse getIndexChartData(Long indexInfoId, PeriodType periodType) {
-		// 기간 계산
+		IndexInfo indexInfo = indexInfoRepository.findById(indexInfoId)
+			.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 지수 정보 ID입니다: " + indexInfoId));
+
 		LocalDate startDate = calculateStartDate(periodType);
 
-		// 데이터 조회
-		List<IndexData> indexDataList = startDate != null
-			? indexDataRepository.findByIndexInfoIdAndBaseDateGreaterThanEqualOrderByBaseDateAsc(indexInfoId, startDate)
-			: indexDataRepository.findByIndexInfoIdOrderByBaseDateAsc(indexInfoId);
+		List<IndexData> indexDataList = getIndexDataOptimized(indexInfoId, startDate);
 
 		if (indexDataList.isEmpty()) {
-			throw new IllegalArgumentException("해당 지수 정보에 대한 데이터가 없습니다.");
+			log.warn("지수 데이터가 없습니다. indexInfoId: {}, periodType: {}", indexInfoId, periodType);
+			return createEmptyResponse(indexInfo, periodType);
 		}
 
-		// 지수 정보 조회
-		var indexInfo = indexDataList.get(0).getIndexInfo();
+		List<IndexChartResponse.DataPoint> dataPoints = createDataPointsOptimized(indexDataList, startDate);
 
-		// 기간별 데이터 필터링
-		List<IndexData> filteredData = filterDataByPeriod(indexDataList, periodType);
+		List<IndexChartResponse.DataPoint> ma5DataPoints = calculateMovingAverageOptimized(indexDataList, 5, startDate);
+		List<IndexChartResponse.DataPoint> ma20DataPoints = calculateMovingAverageOptimized(indexDataList, 20,
+			startDate);
 
-		// 차트 데이터 생성
-		List<IndexChartResponse.DataPoint> dataPoints = createDataPoints(filteredData);
-
-		// 이동평균선 계산
-		List<IndexChartResponse.DataPoint> ma5DataPoints = calculateMovingAverage(indexDataList, 5);
-		List<IndexChartResponse.DataPoint> ma20DataPoints = calculateMovingAverage(indexDataList, 20);
+		log.info("차트 데이터 조회 완료. indexInfoId: {}, periodType: {}, dataPoints: {}",
+			indexInfoId, periodType, dataPoints.size());
 
 		return IndexChartResponse.builder()
 			.indexInfoId(indexInfoId)
@@ -62,6 +65,88 @@ public class IndexChartService {
 			.build();
 	}
 
+	private List<IndexData> getIndexDataOptimized(Long indexInfoId, LocalDate startDate) {
+		if (startDate != null) {
+			return indexDataRepository.findByIndexInfoIdAndBaseDateGreaterThanEqualOrderByBaseDateAsc(indexInfoId,
+				startDate);
+		} else {
+			return indexDataRepository.findByIndexInfoIdOrderByBaseDateAsc(indexInfoId);
+		}
+	}
+
+	private IndexChartResponse createEmptyResponse(IndexInfo indexInfo, PeriodType periodType) {
+		return IndexChartResponse.builder()
+			.indexInfoId(indexInfo.getId())
+			.indexClassification(indexInfo.getIndexClassification())
+			.indexName(indexInfo.getIndexName())
+			.periodType(periodType != null ? periodType.name() : "ALL")
+			.dataPoints(new ArrayList<>())
+			.ma5DataPoints(new ArrayList<>())
+			.ma20DataPoints(new ArrayList<>())
+			.build();
+	}
+
+	private List<IndexChartResponse.DataPoint> createDataPointsOptimized(
+		List<IndexData> dataList, LocalDate startDate) {
+
+		return dataList.parallelStream()
+			.filter(data -> data.getClosingPrice() != null)
+			.filter(data -> startDate == null || !data.getBaseDate().isBefore(startDate))
+			.map(data -> IndexChartResponse.DataPoint.builder()
+				.date(data.getBaseDate().format(DATE_FORMATTER))
+				.value(data.getClosingPrice().floatValue())
+				.build())
+			.collect(Collectors.toList());
+	}
+
+	private List<IndexChartResponse.DataPoint> calculateMovingAverageOptimized(
+		List<IndexData> dataList, int period, LocalDate startDate) {
+
+		if (dataList.size() < period) {
+			return new ArrayList<>();
+		}
+
+		List<IndexChartResponse.DataPoint> maDataPoints = new ArrayList<>();
+
+		List<IndexData> validData = dataList.stream()
+			.filter(data -> data.getClosingPrice() != null)
+			.toList();
+
+		if (validData.size() < period) {
+			return maDataPoints;
+		}
+
+		BigDecimal sum = BigDecimal.ZERO;
+
+		for (int i = 0; i < period; i++) {
+			sum = sum.add(validData.get(i).getClosingPrice());
+		}
+
+		LocalDate firstDate = validData.get(period - 1).getBaseDate();
+		if (startDate == null || !firstDate.isBefore(startDate)) {
+			float average = sum.divide(BigDecimal.valueOf(period), 2, RoundingMode.HALF_UP).floatValue();
+			maDataPoints.add(IndexChartResponse.DataPoint.builder()
+				.date(firstDate.format(DATE_FORMATTER))
+				.value(average)
+				.build());
+		}
+
+		for (int i = period; i < validData.size(); i++) {
+			sum = sum.subtract(validData.get(i - period).getClosingPrice())
+				.add(validData.get(i).getClosingPrice());
+
+			LocalDate currentDate = validData.get(i).getBaseDate();
+			if (startDate == null || !currentDate.isBefore(startDate)) {
+				float average = sum.divide(BigDecimal.valueOf(period), 2, RoundingMode.HALF_UP).floatValue();
+				maDataPoints.add(IndexChartResponse.DataPoint.builder()
+					.date(currentDate.format(DATE_FORMATTER))
+					.value(average)
+					.build());
+			}
+		}
+		return maDataPoints;
+	}
+
 	private LocalDate calculateStartDate(PeriodType periodType) {
 		if (periodType == null)
 			return null;
@@ -72,55 +157,5 @@ public class IndexChartService {
 			case QUARTERLY -> now.minusMonths(3);
 			case YEARLY -> now.minusYears(1);
 		};
-	}
-
-	private List<IndexData> filterDataByPeriod(List<IndexData> dataList, PeriodType periodType) {
-		if (periodType == null)
-			return dataList;
-
-		LocalDate startDate = calculateStartDate(periodType);
-		return dataList.stream()
-			.filter(data -> !data.getBaseDate().isBefore(startDate))
-			.collect(Collectors.toList());
-	}
-
-	private List<IndexChartResponse.DataPoint> createDataPoints(List<IndexData> dataList) {
-		return dataList.stream()
-			.map(data -> IndexChartResponse.DataPoint.builder()
-				.date(data.getBaseDate().format(DATE_FORMATTER))
-				.value(data.getClosingPrice() != null ? data.getClosingPrice().floatValue() : 0f)
-				.build())
-			.collect(Collectors.toList());
-	}
-
-	private List<IndexChartResponse.DataPoint> calculateMovingAverage(List<IndexData> dataList, int period) {
-		List<IndexChartResponse.DataPoint> maDataPoints = new ArrayList<>();
-
-		if (dataList.size() < period) {
-			return maDataPoints;
-		}
-
-		for (int i = period - 1; i < dataList.size(); i++) {
-			BigDecimal sum = BigDecimal.ZERO;
-			int count = 0;
-
-			for (int j = i - period + 1; j <= i; j++) {
-				BigDecimal price = dataList.get(j).getClosingPrice();
-				if (price != null) {
-					sum = sum.add(price);
-					count++;
-				}
-			}
-
-			if (count > 0) {
-				float average = sum.divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP).floatValue();
-				maDataPoints.add(IndexChartResponse.DataPoint.builder()
-					.date(dataList.get(i).getBaseDate().format(DATE_FORMATTER))
-					.value(average)
-					.build());
-			}
-		}
-
-		return maDataPoints;
 	}
 }
