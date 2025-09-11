@@ -22,7 +22,9 @@ import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -31,14 +33,25 @@ public class SyncJobQueryService {
 	private final EntityManager entityManager;
 
 	public PagedSyncJobResponse getSyncJobList(SyncJobListRequest request) {
-		// 커서 처리
+		log.info("Query request: jobType={}, indexInfoId={}, status={}, size={}, cursor={}",
+			request.getJobType(), request.getIndexInfoId(), request.getStatus(),
+			request.getSize(), request.getCursor());
+
+		// 커서 파싱
 		Long lastId = parseLastId(request.getCursor(), request.getIdAfter());
+		if (lastId != null) {
+			log.info("Parsed cursor lastId: {}", lastId);
+		}
 
 		// 정렬 설정
 		Sort.Direction direction = "desc".equalsIgnoreCase(request.getSortDirection())
 			? Sort.Direction.DESC : Sort.Direction.ASC;
 
-		// Criteria API를 사용한 안전한 쿼리 빌딩
+		// 전체 카운트 조회 (모든 요청에서 조회)
+		Long totalElements = getTotalCount(request);
+		log.info("Total count for current filters: {}", totalElements);
+
+		// 쿼리 실행
 		List<SyncJob> syncJobs = buildCriteriaQuery(request, lastId, direction);
 
 		// 다음 페이지 존재 여부 확인을 위해 size + 1로 조회
@@ -60,14 +73,14 @@ public class SyncJobQueryService {
 			nextIdAfter = lastIdInPage.toString();
 		}
 
-		// totalElements는 정확한 계산을 위해 별도 쿼리 필요 (성능상 현재 페이지 크기로 대체)
-		Long totalElements = getTotalCount(request);
+		log.info("Query result: contentSize={}, requestedSize={}, hasNext={}, nextCursor={}",
+			content.size(), request.getSize(), hasNext, nextCursor);
 
 		return PagedSyncJobResponse.builder()
 			.content(content)
 			.nextCursor(nextCursor)
 			.nextIdAfter(nextIdAfter)
-			.size(content.size())
+			.size(request.getSize()) // 원래 요청한 사이즈 유지
 			.totalElements(totalElements)
 			.hasNext(hasNext)
 			.build();
@@ -94,18 +107,20 @@ public class SyncJobQueryService {
 
 		List<Predicate> predicates = buildPredicates(cb, root, request);
 
-		// 커서 기반 페이지네이션 조건
+		// 커서 기반 페이지네이션 조건 (무한 스크롤의 핵심)
 		if (lastId != null) {
 			if (direction == Sort.Direction.DESC) {
 				predicates.add(cb.lessThan(root.get("id"), lastId));
+				log.debug("Added cursor condition: id < {}", lastId);
 			} else {
 				predicates.add(cb.greaterThan(root.get("id"), lastId));
+				log.debug("Added cursor condition: id > {}", lastId);
 			}
 		}
 
 		query.where(predicates.toArray(new Predicate[0]));
 
-		// 정렬 설정
+		// 정렬 설정 (일관된 정렬을 위해 id를 보조 정렬로 사용)
 		String sortField = mapSortField(request.getSortField());
 		List<Order> orders = new ArrayList<>();
 
@@ -122,7 +137,10 @@ public class SyncJobQueryService {
 		TypedQuery<SyncJob> typedQuery = entityManager.createQuery(query);
 		typedQuery.setMaxResults(request.getSize() + 1); // hasNext 판단을 위해 +1
 
-		return typedQuery.getResultList();
+		List<SyncJob> result = typedQuery.getResultList();
+		log.debug("Query executed, returned {} records", result.size());
+
+		return result;
 	}
 
 	private List<Predicate> buildPredicates(CriteriaBuilder cb, Root<SyncJob> root, SyncJobListRequest request) {
@@ -165,18 +183,28 @@ public class SyncJobQueryService {
 	}
 
 	private Long parseLastId(String cursor, String idAfter) {
+		// cursor 우선 처리
 		if (cursor != null && !cursor.trim().isEmpty()) {
 			try {
-				return Long.parseLong(cursor);
-			} catch (NumberFormatException ignored) {
+				Long parsedId = Long.parseLong(cursor);
+				log.debug("Successfully parsed cursor: {}", parsedId);
+				return parsedId;
+			} catch (NumberFormatException e) {
+				log.warn("Failed to parse cursor '{}': {}", cursor, e.getMessage());
 			}
 		}
+
+		// idAfter 처리
 		if (idAfter != null && !idAfter.trim().isEmpty()) {
 			try {
-				return Long.parseLong(idAfter);
-			} catch (NumberFormatException ignored) {
+				Long parsedId = Long.parseLong(idAfter);
+				log.debug("Successfully parsed idAfter: {}", parsedId);
+				return parsedId;
+			} catch (NumberFormatException e) {
+				log.warn("Failed to parse idAfter '{}': {}", idAfter, e.getMessage());
 			}
 		}
+
 		return null;
 	}
 
@@ -184,6 +212,7 @@ public class SyncJobQueryService {
 		return switch (apiSortField) {
 			case "targetDate" -> "targetDate";
 			case "jobTime" -> "jobTime";
+			case "id" -> "id";
 			default -> "jobTime";
 		};
 	}

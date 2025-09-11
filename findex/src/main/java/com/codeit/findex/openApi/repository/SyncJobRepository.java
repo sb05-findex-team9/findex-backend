@@ -15,7 +15,8 @@ import com.codeit.findex.openApi.domain.SyncJob;
 public interface SyncJobRepository extends JpaRepository<SyncJob, Long> {
 
 	@Query("SELECT sj FROM SyncJob sj " +
-		"LEFT JOIN FETCH sj.indexInfo " +
+		"LEFT JOIN FETCH sj.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +  // 단수형으로 수정
 		"WHERE " +
 		"(:jobType IS NULL OR sj.jobType = :jobType) AND " +
 		"(:indexInfoId IS NULL OR sj.indexInfo.id = :indexInfoId) AND " +
@@ -37,7 +38,8 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Long> {
 		Pageable pageable);
 
 	@Query("SELECT sj FROM SyncJob sj " +
-		"LEFT JOIN FETCH sj.indexInfo " +
+		"LEFT JOIN FETCH sj.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE " +
 		"(:jobType IS NULL OR sj.jobType = :jobType) AND " +
 		"(:indexInfoId IS NULL OR sj.indexInfo.id = :indexInfoId) AND " +
@@ -61,7 +63,8 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Long> {
 		Pageable pageable);
 
 	@Query("SELECT sj FROM SyncJob sj " +
-		"LEFT JOIN FETCH sj.indexInfo " +
+		"LEFT JOIN FETCH sj.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE " +
 		"(:jobType IS NULL OR sj.jobType = :jobType) AND " +
 		"(:indexInfoId IS NULL OR sj.indexInfo.id = :indexInfoId) AND " +
@@ -84,5 +87,9 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Long> {
 		@Param("lastId") Long lastId,
 		Pageable pageable);
 
+	@Query("SELECT sj FROM SyncJob sj " +
+		"LEFT JOIN FETCH sj.indexInfo ii " +
+		"LEFT JOIN FETCH ii.autoSyncConfig " +
+		"ORDER BY sj.jobTime DESC")
 	List<SyncJob> findTop10ByOrderByJobTimeDesc();
 }

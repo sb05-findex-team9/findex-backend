@@ -19,7 +19,6 @@ import java.util.Set;
 import com.codeit.findex.indexData.domain.IndexData;
 import com.codeit.findex.openApi.domain.AutoSyncConfig;
 import com.codeit.findex.openApi.domain.SyncJob;
-// import com.codeit.findex.openApi.domain.SyncJob;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

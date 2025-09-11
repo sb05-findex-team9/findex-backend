@@ -15,7 +15,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class IndexDataResponseDto {
 	private Long id;
-	private Long indexInfoId;
 	private LocalDate baseDate;
 	private String sourceType;
 	private Double marketPrice;
@@ -31,7 +30,6 @@ public class IndexDataResponseDto {
 	public static IndexDataResponseDto from(IndexData indexData) {
 		return IndexDataResponseDto.builder()
 			.id(indexData.getId())
-			.indexInfoId(indexData.getIndexInfo() != null ? indexData.getIndexInfo().getId() : null)
 			.baseDate(indexData.getBaseDate())
 			.sourceType(indexData.getSourceType())
 			.marketPrice(indexData.getMarketPrice() != null ? indexData.getMarketPrice().doubleValue() : null)
