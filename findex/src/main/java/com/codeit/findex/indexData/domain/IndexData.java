@@ -84,34 +84,50 @@ public class IndexData {
 	private IndexInfo indexInfo;
 
 	public void update(IndexDataUpdateRequest request) {
+		boolean hasUpdates = false;
+
 		if (request.marketPrice() != null) {
 			this.marketPrice = request.marketPrice();
+			hasUpdates = true;
 		}
 		if (request.closingPrice() != null) {
 			this.closingPrice = request.closingPrice();
+			hasUpdates = true;
 		}
 		if (request.highPrice() != null) {
 			this.highPrice = request.highPrice();
+			hasUpdates = true;
 		}
 		if (request.lowPrice() != null) {
 			this.lowPrice = request.lowPrice();
+			hasUpdates = true;
 		}
 		if (request.versus() != null) {
 			this.versus = request.versus();
+			hasUpdates = true;
 		}
 		if (request.fluctuationRate() != null) {
 			this.fluctuationRate = request.fluctuationRate();
+			hasUpdates = true;
 		}
 		if (request.tradingQuantity() != null) {
 			this.tradingQuantity = request.tradingQuantity();
+			hasUpdates = true;
 		}
 		if (request.tradingPrice() != null) {
 			this.tradingPrice = request.tradingPrice();
+			hasUpdates = true;
 		}
 		if (request.marketTotalAmount() != null) {
 			this.marketTotalAmount = request.marketTotalAmount();
+			hasUpdates = true;
+		}
+
+		if (hasUpdates) {
+			this.sourceType = "USER";
 		}
 	}
+
 
 	public boolean hasValidClosingPrice() {
 		return closingPrice != null && closingPrice.compareTo(BigDecimal.ZERO) > 0;
