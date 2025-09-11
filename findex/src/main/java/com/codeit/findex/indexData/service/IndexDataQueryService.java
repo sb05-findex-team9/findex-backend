@@ -1,5 +1,6 @@
 package com.codeit.findex.indexData.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -44,14 +45,28 @@ public class IndexDataQueryService {
 		if (lastId != null) {
 			Optional<IndexData> lastItem = indexDataRepository.findById(lastId);
 			if (lastItem.isPresent()) {
-				LocalDate lastBaseDate = lastItem.get().getBaseDate();
+				// 정렬 필드에 따라 적절한 메서드 선택
+				if ("closingPrice".equals(entitySortField)) {
+					BigDecimal lastClosingPrice = lastItem.get().getClosingPrice();
 
-				if (direction == Sort.Direction.DESC) {
-					resultSlice = indexDataRepository.findIndexDataWithFiltersAfterIdDescSlice(
-						indexInfoId, startDate, endDate, lastBaseDate, lastId, pageable);
+					if (direction == Sort.Direction.DESC) {
+						resultSlice = indexDataRepository.findIndexDataWithFiltersAfterClosingPriceDescSlice(
+							indexInfoId, startDate, endDate, lastClosingPrice, lastId, pageable);
+					} else {
+						resultSlice = indexDataRepository.findIndexDataWithFiltersAfterClosingPriceAscSlice(
+							indexInfoId, startDate, endDate, lastClosingPrice, lastId, pageable);
+					}
 				} else {
-					resultSlice = indexDataRepository.findIndexDataWithFiltersAfterIdAscSlice(
-						indexInfoId, startDate, endDate, lastBaseDate, lastId, pageable);
+					// baseDate 기준 정렬
+					LocalDate lastBaseDate = lastItem.get().getBaseDate();
+
+					if (direction == Sort.Direction.DESC) {
+						resultSlice = indexDataRepository.findIndexDataWithFiltersAfterIdDescSlice(
+							indexInfoId, startDate, endDate, lastBaseDate, lastId, pageable);
+					} else {
+						resultSlice = indexDataRepository.findIndexDataWithFiltersAfterIdAscSlice(
+							indexInfoId, startDate, endDate, lastBaseDate, lastId, pageable);
+					}
 				}
 			} else {
 				resultSlice = indexDataRepository.findIndexDataWithFiltersSlice(
@@ -69,8 +84,8 @@ public class IndexDataQueryService {
 		// 실제 반환할 데이터는 원래 size만큼만
 		List<IndexData> actualContent = hasNext ? content.subList(0, size) : content;
 
-		log.debug("🔍 무한스크롤 - 요청size: {}, 조회된개수: {}, 실제반환: {}, hasNext: {}, lastId: {}",
-			size, content.size(), actualContent.size(), hasNext, lastId);
+		log.debug("🔍 무한스크롤 - 요청size: {}, 조회된개수: {}, 실제반환: {}, hasNext: {}, lastId: {}, sortField: {}, direction: {}",
+			size, content.size(), actualContent.size(), hasNext, lastId, entitySortField, direction);
 
 		// 정확한 Slice 객체 생성
 		return new SliceImpl<>(actualContent, pageable, hasNext);

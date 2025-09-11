@@ -1,5 +1,6 @@
 package com.codeit.findex.indexData.repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -237,6 +238,7 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 	long countIndexDataWithFilters(@Param("indexInfoId") Long indexInfoId,
 		@Param("startDate") LocalDate startDate,
 		@Param("endDate") LocalDate endDate);
+
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
 		"WHERE id.sourceType = :sourceType " +
@@ -248,5 +250,35 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("startDate") LocalDate startDate,
 		@Param("endDate") LocalDate endDate
 	);
+
+	// 종가 기준 내림차순 정렬용 커서 페이지네이션
+	@Query("SELECT id FROM IndexData id " +
+		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
+		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
+		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
+		"AND (:lastClosingPrice IS NULL OR id.closingPrice < :lastClosingPrice " +
+		"OR (id.closingPrice = :lastClosingPrice AND id.id < :lastId))")
+	Slice<IndexData> findIndexDataWithFiltersAfterClosingPriceDescSlice(
+		@Param("indexInfoId") Long indexInfoId,
+		@Param("startDate") LocalDate startDate,
+		@Param("endDate") LocalDate endDate,
+		@Param("lastClosingPrice") BigDecimal lastClosingPrice,
+		@Param("lastId") Long lastId,
+		Pageable pageable);
+
+	// 종가 기준 오름차순 정렬용 커서 페이지네이션
+	@Query("SELECT id FROM IndexData id " +
+		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
+		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
+		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
+		"AND (:lastClosingPrice IS NULL OR id.closingPrice > :lastClosingPrice " +
+		"OR (id.closingPrice = :lastClosingPrice AND id.id > :lastId))")
+	Slice<IndexData> findIndexDataWithFiltersAfterClosingPriceAscSlice(
+		@Param("indexInfoId") Long indexInfoId,
+		@Param("startDate") LocalDate startDate,
+		@Param("endDate") LocalDate endDate,
+		@Param("lastClosingPrice") BigDecimal lastClosingPrice,
+		@Param("lastId") Long lastId,
+		Pageable pageable);
 
 }
