@@ -113,7 +113,6 @@ public class IndexData {
 		}
 	}
 
-}
 	public boolean hasValidClosingPrice() {
 		return closingPrice != null && closingPrice.compareTo(BigDecimal.ZERO) > 0;
 	}
