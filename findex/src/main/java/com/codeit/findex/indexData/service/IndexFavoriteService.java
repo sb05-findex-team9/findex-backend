@@ -29,7 +29,7 @@ public class IndexFavoriteService {
 	public List<IndexFavoritePerformance> getFavoriteIndexPerformance(PerformancePeriodType periodType) {
 		List<IndexInfo> favoriteIndexes = indexInfoRepository.findByFavoriteTrue();
 
-		LocalDate currentDate = LocalDate.now();
+		LocalDate currentDate = LocalDate.now().minusDays(1);
 		LocalDate compareDate = getCompareDate(currentDate, periodType);
 
 		return favoriteIndexes.stream()
