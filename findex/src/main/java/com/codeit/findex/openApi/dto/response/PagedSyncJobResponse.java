@@ -1,4 +1,4 @@
-package com.codeit.findex.openApi.dto;
+package com.codeit.findex.openApi.dto.response;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -12,6 +12,6 @@ public class PagedSyncJobResponse {
 	private String nextCursor;
 	private String nextIdAfter;
 	private Integer size;
-	private Integer totalElements;
+	private Long totalElements;
 	private Boolean hasNext;
 }

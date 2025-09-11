@@ -1,4 +1,4 @@
-package com.codeit.findex.openApi.dto;
+package com.codeit.findex.openApi.dto.response;
 
 import lombok.Builder;
 import lombok.Getter;

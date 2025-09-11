@@ -9,10 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.codeit.findex.openApi.domain.SyncJob;
-import com.codeit.findex.openApi.dto.PagedSyncJobResponse;
-import com.codeit.findex.openApi.dto.SyncJobListRequest;
-import com.codeit.findex.openApi.dto.SyncJobResponse;
-import com.codeit.findex.openApi.repository.SyncJobRepository;
+import com.codeit.findex.openApi.dto.response.PagedSyncJobResponse;
+import com.codeit.findex.openApi.dto.request.SyncJobListRequest;
+import com.codeit.findex.openApi.dto.response.SyncJobResponse;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
@@ -29,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 @Transactional(readOnly = true)
 public class SyncJobQueryService {
 
-	private final SyncJobRepository syncJobRepository;
 	private final EntityManager entityManager;
 
 	public PagedSyncJobResponse getSyncJobList(SyncJobListRequest request) {
@@ -62,14 +60,28 @@ public class SyncJobQueryService {
 			nextIdAfter = lastIdInPage.toString();
 		}
 
+		// totalElements는 정확한 계산을 위해 별도 쿼리 필요 (성능상 현재 페이지 크기로 대체)
+		Long totalElements = getTotalCount(request);
+
 		return PagedSyncJobResponse.builder()
 			.content(content)
 			.nextCursor(nextCursor)
 			.nextIdAfter(nextIdAfter)
 			.size(content.size())
-			.totalElements(content.size()) // 정확한 총 개수는 별도 쿼리 필요
+			.totalElements(totalElements)
 			.hasNext(hasNext)
 			.build();
+	}
+
+	private Long getTotalCount(SyncJobListRequest request) {
+		CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+		CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
+		Root<SyncJob> root = countQuery.from(SyncJob.class);
+
+		List<Predicate> predicates = buildPredicates(cb, root, request);
+		countQuery.select(cb.count(root)).where(predicates.toArray(new Predicate[0]));
+
+		return entityManager.createQuery(countQuery).getSingleResult();
 	}
 
 	private List<SyncJob> buildCriteriaQuery(SyncJobListRequest request, Long lastId, Sort.Direction direction) {
@@ -80,6 +92,40 @@ public class SyncJobQueryService {
 		// IndexInfo fetch join으로 N+1 문제 해결
 		root.fetch("indexInfo", JoinType.LEFT);
 
+		List<Predicate> predicates = buildPredicates(cb, root, request);
+
+		// 커서 기반 페이지네이션 조건
+		if (lastId != null) {
+			if (direction == Sort.Direction.DESC) {
+				predicates.add(cb.lessThan(root.get("id"), lastId));
+			} else {
+				predicates.add(cb.greaterThan(root.get("id"), lastId));
+			}
+		}
+
+		query.where(predicates.toArray(new Predicate[0]));
+
+		// 정렬 설정
+		String sortField = mapSortField(request.getSortField());
+		List<Order> orders = new ArrayList<>();
+
+		if (direction == Sort.Direction.DESC) {
+			orders.add(cb.desc(root.get(sortField)));
+			orders.add(cb.desc(root.get("id"))); // 안정적인 정렬을 위한 보조 정렬
+		} else {
+			orders.add(cb.asc(root.get(sortField)));
+			orders.add(cb.asc(root.get("id")));
+		}
+
+		query.orderBy(orders);
+
+		TypedQuery<SyncJob> typedQuery = entityManager.createQuery(query);
+		typedQuery.setMaxResults(request.getSize() + 1); // hasNext 판단을 위해 +1
+
+		return typedQuery.getResultList();
+	}
+
+	private List<Predicate> buildPredicates(CriteriaBuilder cb, Root<SyncJob> root, SyncJobListRequest request) {
 		List<Predicate> predicates = new ArrayList<>();
 
 		// 필터 조건 추가
@@ -115,35 +161,7 @@ public class SyncJobQueryService {
 			predicates.add(cb.equal(root.get("result"), request.getStatus()));
 		}
 
-		// 커서 기반 페이지네이션 조건
-		if (lastId != null) {
-			if (direction == Sort.Direction.DESC) {
-				predicates.add(cb.lessThan(root.get("id"), lastId));
-			} else {
-				predicates.add(cb.greaterThan(root.get("id"), lastId));
-			}
-		}
-
-		query.where(predicates.toArray(new Predicate[0]));
-
-		// 정렬 설정
-		String sortField = mapSortField(request.getSortField());
-		List<Order> orders = new ArrayList<>();
-
-		if (direction == Sort.Direction.DESC) {
-			orders.add(cb.desc(root.get(sortField)));
-			orders.add(cb.asc(root.get("id"))); // 안정적인 정렬을 위한 보조 정렬
-		} else {
-			orders.add(cb.asc(root.get(sortField)));
-			orders.add(cb.asc(root.get("id")));
-		}
-
-		query.orderBy(orders);
-
-		TypedQuery<SyncJob> typedQuery = entityManager.createQuery(query);
-		typedQuery.setMaxResults(request.getSize() + 1); // hasNext 판단을 위해 +1
-
-		return typedQuery.getResultList();
+		return predicates;
 	}
 
 	private Long parseLastId(String cursor, String idAfter) {
