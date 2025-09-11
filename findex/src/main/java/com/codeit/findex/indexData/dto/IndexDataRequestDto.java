@@ -35,7 +35,7 @@ public class IndexDataRequestDto {
 
 	public IndexData toEntity(IndexInfo indexInfo) {
 		// sourceType이 null이거나 빈 문자열인 경우 기본값 설정
-		String finalSourceType = StringUtils.hasText(this.sourceType) ? this.sourceType : "OPEN_API";
+		String finalSourceType = StringUtils.hasText(this.sourceType) ? this.sourceType : "사용자";
 
 		return IndexData.builder()
 			.indexInfo(indexInfo)
