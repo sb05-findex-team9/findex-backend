@@ -19,8 +19,8 @@ public class AutoSyncScheduler {
 
 	// 기본: 매일 06:05 (KST). 로컬에선 아래 3)에서 cron 바꿔서 빠르게 테스트 가능.
 	@Scheduled(
-		cron = "${auto-sync.scheduler.cron:20 0 0 * * *}",
-		// cron = "${auto-sync.scheduler.cron:0 5 6 * * *}",
+		// cron = "${auto-sync.scheduler.cron:20 0 0 * * *}",
+		cron = "${auto-sync.scheduler.cron:0 0 6 * * *}",
 		zone = "${auto-sync.scheduler.zone:Asia/Seoul}"
 	)
 	public void run() {
