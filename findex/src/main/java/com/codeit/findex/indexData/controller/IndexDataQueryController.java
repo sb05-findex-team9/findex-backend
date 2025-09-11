@@ -2,6 +2,7 @@ package com.codeit.findex.indexData.controller;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -26,6 +27,8 @@ public class IndexDataQueryController {
 
 	private final IndexDataQueryService indexDataQueryService;
 
+	private final ConcurrentHashMap<String, Long> totalCountCache = new ConcurrentHashMap<>();
+
 	// 지수 데이터 목록 조회
 	@GetMapping
 	public ResponseEntity<PagedResponseDto<IndexDataResponseDto>> getIndexDataList(
@@ -36,7 +39,8 @@ public class IndexDataQueryController {
 		@RequestParam(required = false) String idAfter,
 		@RequestParam(required = false, defaultValue = "baseDate") String sortField,
 		@RequestParam(required = false, defaultValue = "asc") String sortDirection,
-		@RequestParam(required = false, defaultValue = "10") Integer size) {
+		@RequestParam(required = false, defaultValue = "10") Integer size,
+		@RequestParam(required = false, defaultValue = "false") Boolean resetCache) {
 
 		Long lastId = null;
 		if (cursor != null && !cursor.trim().isEmpty()) {
@@ -50,6 +54,8 @@ public class IndexDataQueryController {
 			} catch (NumberFormatException ignored) {
 			}
 		}
+
+		String cacheKey = generateCacheKey(indexInfoId, startDate, endDate, sortField, sortDirection);
 
 		Page<IndexData> indexDataPage = indexDataQueryService.getIndexDataList(
 			indexInfoId, startDate, endDate, lastId, sortField, sortDirection, size);
@@ -66,15 +72,33 @@ public class IndexDataQueryController {
 			nextIdAfter = lastIdInPage.toString();
 		}
 
+		long finalTotalElements;
+		if (lastId == null || Boolean.TRUE.equals(resetCache)) {
+			finalTotalElements = indexDataQueryService.getTotalCount(indexInfoId, startDate, endDate);
+			totalCountCache.put(cacheKey, finalTotalElements);
+		} else {
+			finalTotalElements = totalCountCache.getOrDefault(cacheKey, indexDataPage.getTotalElements());
+		}
+
 		PagedResponseDto<IndexDataResponseDto> response = PagedResponseDto.<IndexDataResponseDto>builder()
 			.content(content)
 			.nextCursor(nextCursor)
 			.nextIdAfter(nextIdAfter)
 			.size(content.size())
-			.totalElements((int)indexDataPage.getTotalElements())
+			.totalElements((int)finalTotalElements)
 			.hasNext(indexDataPage.hasNext())
 			.build();
 
 		return ResponseEntity.ok(response);
+	}
+
+	private String generateCacheKey(Long indexInfoId, LocalDate startDate, LocalDate endDate,
+		String sortField, String sortDirection) {
+		return String.format("%s_%s_%s_%s_%s",
+			indexInfoId != null ? indexInfoId.toString() : "null",
+			startDate != null ? startDate.toString() : "null",
+			endDate != null ? endDate.toString() : "null",
+			sortField,
+			sortDirection);
 	}
 }
