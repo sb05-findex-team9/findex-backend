@@ -12,8 +12,6 @@ public interface AutoSyncConfigRepository extends
 	JpaRepository<AutoSyncConfig, Long>,
 	JpaSpecificationExecutor<AutoSyncConfig> {
 
-	boolean existsByIndexInfoId(Long indexInfoId);
-
 	@Override
 	@EntityGraph(attributePaths = {"indexInfo"})
 	Page<AutoSyncConfig> findAll(Specification<AutoSyncConfig> spec, Pageable pageable);
