@@ -1,6 +1,5 @@
 package com.codeit.findex.openApi.service;
 
-import com.codeit.findex.indexInfo.domain.IndexInfo;
 import com.codeit.findex.openApi.domain.AutoSyncConfig;
 import com.codeit.findex.openApi.dto.AutoSyncConfigDto;
 import com.codeit.findex.openApi.dto.request.AutoSyncConfigUpdateRequest;
@@ -151,17 +150,5 @@ public class AutoSyncConfigService {
 		entity.setEnabled(request.getEnabled());
 		return AutoSyncConfigMapper.toDto(entity);
 	}
-
-	@Transactional
-	public void ensureExists(IndexInfo indexInfo) {
-		if (repository.existsByIndexInfoId(indexInfo.getId()))
-			return;
-
-		AutoSyncConfig cfg = new AutoSyncConfig();
-		cfg.setIndexInfo(indexInfo);
-		cfg.setEnabled(false); // 기본 OFF
-		repository.save(cfg);
-	}
-
 }
 

@@ -15,7 +15,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.codeit.findex.common.openapi.dto.ApiResponseDto;
 import com.codeit.findex.indexInfo.domain.IndexInfo;
 import com.codeit.findex.indexInfo.repository.IndexInfoRepository;
-import com.codeit.findex.openApi.service.AutoSyncConfigService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,7 +24,6 @@ public class ApiIndexInfoService {
 
 	private final IndexInfoRepository indexInfoRepository;
 	private final RestTemplate restTemplate = new RestTemplate();
-	private final AutoSyncConfigService autoSyncConfigService;
 
 	@Value("${api.service-key}")
 	private String serviceKey;
@@ -69,7 +67,6 @@ public class ApiIndexInfoService {
 			.findByIndexNameAndIndexClassification(indexName, indexClassification).stream().findFirst();
 
 		if (existingInfo.isPresent()) {
-			autoSyncConfigService.ensureExists(existingInfo.get());
 			return;
 		}
 
@@ -81,9 +78,7 @@ public class ApiIndexInfoService {
 			.baseIndex(parseBigDecimal(item.getBasIdx()))
 			.build();
 
-
-		IndexInfo saved = indexInfoRepository.save(indexInfo);
-		autoSyncConfigService.ensureExists(saved);
+		indexInfoRepository.save(indexInfo);
 	}
 
 	private String buildApiUrl(int pageNo, int numOfRows) {
