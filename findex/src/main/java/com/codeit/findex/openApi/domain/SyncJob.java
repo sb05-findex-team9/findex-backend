@@ -61,4 +61,8 @@ public class SyncJob {
 	public String getIndexName() {
 		return indexInfo != null ? indexInfo.getIndexName() : null;
 	}
+
+	public void updateResult(String result) {
+		this.result = result;
+	}
 }

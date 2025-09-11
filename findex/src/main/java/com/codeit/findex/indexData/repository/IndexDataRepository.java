@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -180,5 +181,31 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 	long countIndexDataWithFilters(@Param("indexInfoId") Long indexInfoId,
 		@Param("startDate") LocalDate startDate,
 		@Param("endDate") LocalDate endDate);
+
+	Optional<IndexData> findTopByIndexInfoOrderByBaseDateDesc(IndexInfo indexInfo);
+
+	Optional<IndexData> findTopByIndexInfoAndBaseDateLessThanEqualOrderByBaseDateDesc(IndexInfo indexInfo, LocalDate baseDate);
+
+	@Query("SELECT id FROM IndexData id " +
+		"LEFT JOIN FETCH id.indexInfo ii " +
+		"WHERE id.indexInfo.id = :indexInfoId " +
+		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
+		"AND (:endDate IS NULL OR id.baseDate <= :endDate)")
+	List<IndexData> findByIndexInfoIdAndBaseDateBetweenOrderBy(
+		@Param("indexInfoId") Long indexInfoId,
+		@Param("startDate") LocalDate startDate,
+		@Param("endDate") LocalDate endDate,
+		Sort sort);
+
+	@Query("SELECT id FROM IndexData id " +
+		"LEFT JOIN FETCH id.indexInfo ii " +
+		"WHERE (:startDate IS NULL OR id.baseDate >= :startDate) " +
+		"AND (:endDate IS NULL OR id.baseDate <= :endDate)")
+	List<IndexData> findByBaseDateBetweenOrderBy(
+		@Param("startDate") LocalDate startDate,
+		@Param("endDate") LocalDate endDate,
+		Sort sort);
+
+	List<IndexData> findByIndexInfoIdAndBaseDateBetween(Long indexInfoId, LocalDate startDate, LocalDate endDate);
 
 }

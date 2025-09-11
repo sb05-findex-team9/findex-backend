@@ -1,13 +1,14 @@
 package com.codeit.findex.openApi.repository;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import com.codeit.findex.openApi.domain.SyncJob;
 
@@ -82,4 +83,6 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Long> {
 		@Param("status") String status,
 		@Param("lastId") Long lastId,
 		Pageable pageable);
+
+	List<SyncJob> findTop10ByOrderByJobTimeDesc();
 }
