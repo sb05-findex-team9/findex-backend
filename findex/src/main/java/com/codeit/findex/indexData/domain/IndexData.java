@@ -3,6 +3,7 @@ package com.codeit.findex.indexData.domain;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import com.codeit.findex.indexData.dto.IndexDataUpdateRequest;
 import com.codeit.findex.indexInfo.domain.IndexInfo;
 
 import jakarta.persistence.Column;
@@ -82,6 +83,37 @@ public class IndexData {
 	@JoinColumn(name = "index_info_id", nullable = false)
 	private IndexInfo indexInfo;
 
+	public void update(IndexDataUpdateRequest request) {
+		if (request.marketPrice() != null) {
+			this.marketPrice = request.marketPrice();
+		}
+		if (request.closingPrice() != null) {
+			this.closingPrice = request.closingPrice();
+		}
+		if (request.highPrice() != null) {
+			this.highPrice = request.highPrice();
+		}
+		if (request.lowPrice() != null) {
+			this.lowPrice = request.lowPrice();
+		}
+		if (request.versus() != null) {
+			this.versus = request.versus();
+		}
+		if (request.fluctuationRate() != null) {
+			this.fluctuationRate = request.fluctuationRate();
+		}
+		if (request.tradingQuantity() != null) {
+			this.tradingQuantity = request.tradingQuantity();
+		}
+		if (request.tradingPrice() != null) {
+			this.tradingPrice = request.tradingPrice();
+		}
+		if (request.marketTotalAmount() != null) {
+			this.marketTotalAmount = request.marketTotalAmount();
+		}
+	}
+
+}
 	public boolean hasValidClosingPrice() {
 		return closingPrice != null && closingPrice.compareTo(BigDecimal.ZERO) > 0;
 	}

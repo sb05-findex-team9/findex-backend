@@ -104,5 +104,6 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long> {
 
 	List<IndexInfo> findByIndexNameAndIndexClassification(String indexName, String indexClassification);
 
+	List<IndexInfo> findByFavoriteTrue();
 }
 
