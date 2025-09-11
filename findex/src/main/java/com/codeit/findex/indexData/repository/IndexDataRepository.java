@@ -1,6 +1,5 @@
 package com.codeit.findex.indexData.repository;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +8,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -25,46 +23,6 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		"where d.indexInfo = :indexInfo and d.baseDate in :dates")
 	List<LocalDate> findExistingDates(@Param("indexInfo") IndexInfo indexInfo,
 		@Param("dates") List<LocalDate> dates);
-
-	// 메인 조회 쿼리들에서 autoSyncConfig JOIN 제거
-	@Query("SELECT id FROM IndexData id " +
-		"LEFT JOIN FETCH id.indexInfo ii " +
-		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
-		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
-		"AND (:endDate IS NULL OR id.baseDate <= :endDate)")
-	Page<IndexData> findIndexDataWithFilters(
-		@Param("indexInfoId") Long indexInfoId,
-		@Param("startDate") LocalDate startDate,
-		@Param("endDate") LocalDate endDate,
-		Pageable pageable);
-
-	@Query("SELECT id FROM IndexData id " +
-		"LEFT JOIN FETCH id.indexInfo ii " +
-		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
-		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
-		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
-		"AND (CAST(:lastBaseDate AS date) IS NULL OR id.baseDate > CAST(:lastBaseDate AS date) OR (id.baseDate = CAST(:lastBaseDate AS date) AND id.id > :lastId))")
-	Page<IndexData> findIndexDataWithFiltersAfterIdAsc(
-		@Param("indexInfoId") Long indexInfoId,
-		@Param("startDate") LocalDate startDate,
-		@Param("endDate") LocalDate endDate,
-		@Param("lastBaseDate") LocalDate lastBaseDate,
-		@Param("lastId") Long lastId,
-		Pageable pageable);
-
-	@Query("SELECT id FROM IndexData id " +
-		"LEFT JOIN FETCH id.indexInfo ii " +
-		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
-		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
-		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
-		"AND (CAST(:lastBaseDate AS date) IS NULL OR id.baseDate < CAST(:lastBaseDate AS date) OR (id.baseDate = CAST(:lastBaseDate AS date) AND id.id < :lastId))")
-	Page<IndexData> findIndexDataWithFiltersAfterIdDesc(
-		@Param("indexInfoId") Long indexInfoId,
-		@Param("startDate") LocalDate startDate,
-		@Param("endDate") LocalDate endDate,
-		@Param("lastBaseDate") LocalDate lastBaseDate,
-		@Param("lastId") Long lastId,
-		Pageable pageable);
 
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
@@ -195,42 +153,6 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 
 	List<IndexData> findByIndexInfoIdAndBaseDateBetween(Long indexInfoId, LocalDate startDate, LocalDate endDate);
 
-	// ===== N+1 문제 해결: Slice 쿼리들에 JOIN FETCH 추가 =====
-	@Query("SELECT id FROM IndexData id " +
-		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
-		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
-		"AND (:endDate IS NULL OR id.baseDate <= :endDate)")
-	Slice<IndexData> findIndexDataWithFiltersSlice(@Param("indexInfoId") Long indexInfoId,
-		@Param("startDate") LocalDate startDate,
-		@Param("endDate") LocalDate endDate,
-		Pageable pageable);
-
-	@Query("SELECT id FROM IndexData id " +
-		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
-		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
-		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
-		"AND (CAST(:lastBaseDate AS date) IS NULL OR id.baseDate > CAST(:lastBaseDate AS date) " +
-		"OR (id.baseDate = CAST(:lastBaseDate AS date) AND id.id > :lastId))")
-	Slice<IndexData> findIndexDataWithFiltersAfterIdAscSlice(@Param("indexInfoId") Long indexInfoId,
-		@Param("startDate") LocalDate startDate,
-		@Param("endDate") LocalDate endDate,
-		@Param("lastBaseDate") LocalDate lastBaseDate,
-		@Param("lastId") Long lastId,
-		Pageable pageable);
-
-	@Query("SELECT id FROM IndexData id " +
-		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
-		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
-		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
-		"AND (CAST(:lastBaseDate AS date) IS NULL OR id.baseDate < CAST(:lastBaseDate AS date) " +
-		"OR (id.baseDate = CAST(:lastBaseDate AS date) AND id.id < :lastId))")
-	Slice<IndexData> findIndexDataWithFiltersAfterIdDescSlice(@Param("indexInfoId") Long indexInfoId,
-		@Param("startDate") LocalDate startDate,
-		@Param("endDate") LocalDate endDate,
-		@Param("lastBaseDate") LocalDate lastBaseDate,
-		@Param("lastId") Long lastId,
-		Pageable pageable);
-
 	@Query("SELECT COUNT(i) FROM IndexData i " +
 		"WHERE (:indexInfoId IS NULL OR i.indexInfo.id = :indexInfoId) " +
 		"AND (:startDate IS NULL OR i.baseDate >= :startDate) " +
@@ -251,42 +173,14 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("endDate") LocalDate endDate
 	);
 
-	/**
-	 * 종가 기준 내림차순 정렬용 커서 페이지네이션
-	 * ORDER BY closingPrice DESC, id ASC 순서로 정렬된 데이터에서
-	 * 마지막 항목 이후의 데이터를 조회
-	 */
 	@Query("SELECT id FROM IndexData id " +
+		"LEFT JOIN FETCH id.indexInfo ii " +
 		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
 		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
-		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
-		"AND (:lastClosingPrice IS NULL OR id.closingPrice < :lastClosingPrice " +
-		"OR (id.closingPrice = :lastClosingPrice AND id.id > :lastId))")
-	Slice<IndexData> findIndexDataWithFiltersAfterClosingPriceDescSlice(
+		"AND (:endDate IS NULL OR id.baseDate <= :endDate)")
+	Page<IndexData> findIndexDataWithFilters(
 		@Param("indexInfoId") Long indexInfoId,
 		@Param("startDate") LocalDate startDate,
 		@Param("endDate") LocalDate endDate,
-		@Param("lastClosingPrice") BigDecimal lastClosingPrice,
-		@Param("lastId") Long lastId,
 		Pageable pageable);
-
-	/**
-	 * 종가 기준 오름차순 정렬용 커서 페이지네이션
-	 * ORDER BY closingPrice ASC, id ASC 순서로 정렬된 데이터에서
-	 * 마지막 항목 이후의 데이터를 조회
-	 */
-	@Query("SELECT id FROM IndexData id " +
-		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
-		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
-		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
-		"AND (:lastClosingPrice IS NULL OR id.closingPrice > :lastClosingPrice " +
-		"OR (id.closingPrice = :lastClosingPrice AND id.id > :lastId))")
-	Slice<IndexData> findIndexDataWithFiltersAfterClosingPriceAscSlice(
-		@Param("indexInfoId") Long indexInfoId,
-		@Param("startDate") LocalDate startDate,
-		@Param("endDate") LocalDate endDate,
-		@Param("lastClosingPrice") BigDecimal lastClosingPrice,
-		@Param("lastId") Long lastId,
-		Pageable pageable);
-
 }

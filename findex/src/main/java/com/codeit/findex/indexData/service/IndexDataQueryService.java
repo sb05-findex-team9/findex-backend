@@ -1,19 +1,16 @@
 package com.codeit.findex.indexData.service;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Slice;
-import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.codeit.findex.indexData.domain.IndexData;
+import com.codeit.findex.indexData.dto.IndexDataResponseDto;
 import com.codeit.findex.indexData.repository.IndexDataRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -27,79 +24,48 @@ public class IndexDataQueryService {
 
 	private final IndexDataRepository indexDataRepository;
 
-	public Slice<IndexData> getIndexDataList(Long indexInfoId, LocalDate startDate, LocalDate endDate,
-		Long lastId, String sortField, String sortDirection, Integer size) {
+	public Page<IndexDataResponseDto> getIndexDataList(Long indexInfoId, LocalDate startDate, LocalDate endDate,
+		int page, int size, String sortField, String sortDirection) {
 
+		// 정렬 방향 설정
 		Sort.Direction direction = "desc".equalsIgnoreCase(sortDirection)
 			? Sort.Direction.DESC
 			: Sort.Direction.ASC;
 
+		// 정렬 필드 매핑
 		String entitySortField = mapSortField(sortField);
 
-		// size + 1 조회해서 hasNext 판단
-		Pageable pageable = PageRequest.of(0, size + 1,
+		// Pageable 생성 (id를 보조 정렬로 추가하여 일관된 정렬 보장)
+		Pageable pageable = PageRequest.of(page, size,
 			Sort.by(direction, entitySortField).and(Sort.by(Sort.Direction.ASC, "id")));
 
-		Slice<IndexData> resultSlice;
+		log.debug("🔍 OFFSET 기반 쿼리 - page: {}, size: {}, sortField: {}, direction: {}",
+			page, size, entitySortField, direction);
 
-		if (lastId != null) {
-			Optional<IndexData> lastItem = indexDataRepository.findById(lastId);
-			if (lastItem.isPresent()) {
-				// 정렬 필드에 따라 적절한 메서드 선택
-				if ("closingPrice".equals(entitySortField)) {
-					BigDecimal lastClosingPrice = lastItem.get().getClosingPrice();
+		// 페이지네이션된 데이터 조회
+		Page<IndexData> indexDataPage = indexDataRepository.findIndexDataWithFilters(
+			indexInfoId, startDate, endDate, pageable);
 
-					if (direction == Sort.Direction.DESC) {
-						resultSlice = indexDataRepository.findIndexDataWithFiltersAfterClosingPriceDescSlice(
-							indexInfoId, startDate, endDate, lastClosingPrice, lastId, pageable);
-					} else {
-						resultSlice = indexDataRepository.findIndexDataWithFiltersAfterClosingPriceAscSlice(
-							indexInfoId, startDate, endDate, lastClosingPrice, lastId, pageable);
-					}
-				} else {
-					// baseDate 기준 정렬
-					LocalDate lastBaseDate = lastItem.get().getBaseDate();
+		// DTO 변환
+		Page<IndexDataResponseDto> result = indexDataPage.map(IndexDataResponseDto::from);
 
-					if (direction == Sort.Direction.DESC) {
-						resultSlice = indexDataRepository.findIndexDataWithFiltersAfterIdDescSlice(
-							indexInfoId, startDate, endDate, lastBaseDate, lastId, pageable);
-					} else {
-						resultSlice = indexDataRepository.findIndexDataWithFiltersAfterIdAscSlice(
-							indexInfoId, startDate, endDate, lastBaseDate, lastId, pageable);
-					}
-				}
-			} else {
-				resultSlice = indexDataRepository.findIndexDataWithFiltersSlice(
-					indexInfoId, startDate, endDate, pageable);
-			}
-		} else {
-			resultSlice = indexDataRepository.findIndexDataWithFiltersSlice(
-				indexInfoId, startDate, endDate, pageable);
-		}
+		log.debug("✅ 조회 완료 - 조회된 개수: {}, 전체 개수: {}, 전체 페이지: {}, hasNext: {}",
+			result.getContent().size(), result.getTotalElements(), result.getTotalPages(), result.hasNext());
 
-		// 실제 데이터와 hasNext 값을 정확히 계산
-		List<IndexData> content = resultSlice.getContent();
-		boolean hasNext = content.size() > size;
-
-		// 실제 반환할 데이터는 원래 size만큼만
-		List<IndexData> actualContent = hasNext ? content.subList(0, size) : content;
-
-		log.debug("🔍 무한스크롤 - 요청size: {}, 조회된개수: {}, 실제반환: {}, hasNext: {}, lastId: {}, sortField: {}, direction: {}",
-			size, content.size(), actualContent.size(), hasNext, lastId, entitySortField, direction);
-
-		// 정확한 Slice 객체 생성
-		return new SliceImpl<>(actualContent, pageable, hasNext);
+		return result;
 	}
 
 	private String mapSortField(String apiSortField) {
 		return switch (apiSortField) {
 			case "baseDate", "date" -> "baseDate";           // 날짜
 			case "closingPrice", "price" -> "closingPrice";  // 종가
+			case "marketPrice" -> "marketPrice";             // 시가
+			case "highPrice" -> "highPrice";                 // 고가
+			case "lowPrice" -> "lowPrice";                   // 저가
 			default -> "baseDate";                           // 기본값: 날짜
 		};
 	}
 
-	// lastId 파라미터 제거 - 전체 조건에 맞는 총 개수만 반환
 	public long getTotalCount(Long indexInfoId, LocalDate startDate, LocalDate endDate) {
 		return indexDataRepository.countIndexDataWithFilters(indexInfoId, startDate, endDate);
 	}
