@@ -65,4 +65,8 @@ public class IndexDataQueryService {
 			default -> "baseDate";                           // 기본값: 날짜
 		};
 	}
+
+	public long getTotalCount(Long indexInfoId, LocalDate startDate, LocalDate endDate) {
+		return indexDataRepository.countIndexDataWithFilters(indexInfoId, startDate, endDate);
+	}
 }

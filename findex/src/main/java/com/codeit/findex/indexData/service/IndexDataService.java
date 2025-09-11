@@ -37,7 +37,7 @@ public class IndexDataService {
 
 		// sourceType 검증 및 기본값 설정
 		if (!StringUtils.hasText(requestDto.getSourceType())) {
-			log.warn("sourceType이 null 또는 빈 값입니다. 기본값 'OPEN_API'로 설정합니다.");
+			log.warn("sourceType이 null 또는 빈 값입니다. 기본값 '사용자'로 설정합니다.");
 		}
 
 		// IndexInfo 조회 및 검증
@@ -51,7 +51,7 @@ public class IndexDataService {
 		).isPresent();
 
 		if (exists) {
-			throw new IllegalArgumentException("같은 날짜의 데이터는 추가할 수 없습니다.");
+			throw new IllegalArgumentException("중복 데이터");
 		}
 
 		// 엔티티 생성

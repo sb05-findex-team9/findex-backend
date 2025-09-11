@@ -1,41 +1,50 @@
 package com.codeit.findex.openApi.controller;
 
-import java.util.List;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
+import com.codeit.findex.openApi.dto.response.PagedSyncJobResponse;
+import com.codeit.findex.openApi.dto.request.SyncJobListRequest;
 import com.codeit.findex.openApi.dto.request.IndexDataSyncRequest;
-import com.codeit.findex.openApi.dto.response.SyncJobResponseDto;
+import com.codeit.findex.openApi.dto.response.SyncJobResponse;
+import com.codeit.findex.openApi.service.SyncJobQueryService;
 import com.codeit.findex.openApi.service.IndexDataSyncService;
 import com.codeit.findex.openApi.service.SyncService;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/sync-jobs")
 @RequiredArgsConstructor
 public class SyncJobController {
 
-	private final SyncService syncService;
+	private final SyncJobQueryService syncJobQueryService;
 	private final IndexDataSyncService indexDataSyncService;
+	private final SyncService syncService;
 
-	@PostMapping("/index-infos")
-	public ResponseEntity<List<SyncJobResponseDto>> syncIndexInfos() {
-		List<SyncJobResponseDto> responses = syncService.createIndexInfoSyncJob();
-		return ResponseEntity.status(HttpStatus.ACCEPTED).body(responses);
+	@GetMapping
+	public ResponseEntity<PagedSyncJobResponse> getSyncJobList(
+		@ModelAttribute @Valid SyncJobListRequest request) {
+
+		PagedSyncJobResponse response = syncJobQueryService.getSyncJobList(request);
+		return ResponseEntity.ok(response);
 	}
 
 	@PostMapping("/index-data")
-	public ResponseEntity<List<SyncJobResponseDto>> syncIndexData(@RequestBody IndexDataSyncRequest request) {
+	public ResponseEntity<List<SyncJobResponse>> syncIndexData(
+		@RequestBody @Valid IndexDataSyncRequest request) {
 
-		List<SyncJobResponseDto> responses = indexDataSyncService.syncIndexData(request);
-
-		return ResponseEntity.status(HttpStatus.ACCEPTED).body(responses);
+		List<SyncJobResponse> result = indexDataSyncService.syncIndexData(request);
+		return ResponseEntity.ok(result);
 	}
 
+	@PostMapping("/index-infos")
+	public ResponseEntity<List<SyncJobResponse>> syncIndexInfos() {
+		List<SyncJobResponse> result = syncService.createIndexInfoSyncJob();
+		return ResponseEntity.ok(result);
+	}
 }

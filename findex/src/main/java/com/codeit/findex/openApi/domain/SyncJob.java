@@ -49,9 +49,8 @@ public class SyncJob {
 	@Column(name = "result", length = 16)
 	private String result;
 
-	//
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "index_info_id", nullable = false, unique = true)
+	@JoinColumn(name = "index_info_id") // nullable = false 제거
 	private IndexInfo indexInfo;
 
 	public Long getIndexInfoId() {

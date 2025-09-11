@@ -19,6 +19,7 @@ import java.util.Set;
 import com.codeit.findex.indexData.domain.IndexData;
 import com.codeit.findex.openApi.domain.AutoSyncConfig;
 import com.codeit.findex.openApi.domain.SyncJob;
+// import com.codeit.findex.openApi.domain.SyncJob;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -70,6 +71,6 @@ public class IndexInfo {
 	@OneToOne(mappedBy = "indexInfo")
 	private AutoSyncConfig autoSyncConfig;
 
-	@OneToMany(mappedBy = "indexInfo",orphanRemoval = true, cascade = {CascadeType.ALL})
+	@OneToMany(mappedBy = "indexInfo", orphanRemoval = true, cascade = {CascadeType.ALL})
 	private Set<SyncJob> syncJobs;
 }

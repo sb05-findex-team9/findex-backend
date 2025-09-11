@@ -14,7 +14,9 @@ import com.codeit.findex.openApi.domain.SyncJob;
 
 public interface SyncJobRepository extends JpaRepository<SyncJob, Long> {
 
-	@Query("SELECT sj FROM SyncJob sj WHERE " +
+	@Query("SELECT sj FROM SyncJob sj " +
+		"LEFT JOIN FETCH sj.indexInfo " +
+		"WHERE " +
 		"(:jobType IS NULL OR sj.jobType = :jobType) AND " +
 		"(:indexInfoId IS NULL OR sj.indexInfo.id = :indexInfoId) AND " +
 		"(:baseDateFrom IS NULL OR sj.targetDate >= :baseDateFrom) AND " +
@@ -34,7 +36,9 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Long> {
 		@Param("status") String status,
 		Pageable pageable);
 
-	@Query("SELECT sj FROM SyncJob sj WHERE " +
+	@Query("SELECT sj FROM SyncJob sj " +
+		"LEFT JOIN FETCH sj.indexInfo " +
+		"WHERE " +
 		"(:jobType IS NULL OR sj.jobType = :jobType) AND " +
 		"(:indexInfoId IS NULL OR sj.indexInfo.id = :indexInfoId) AND " +
 		"(:baseDateFrom IS NULL OR sj.targetDate >= :baseDateFrom) AND " +
@@ -56,7 +60,9 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Long> {
 		@Param("lastId") Long lastId,
 		Pageable pageable);
 
-	@Query("SELECT sj FROM SyncJob sj WHERE " +
+	@Query("SELECT sj FROM SyncJob sj " +
+		"LEFT JOIN FETCH sj.indexInfo " +
+		"WHERE " +
 		"(:jobType IS NULL OR sj.jobType = :jobType) AND " +
 		"(:indexInfoId IS NULL OR sj.indexInfo.id = :indexInfoId) AND " +
 		"(:baseDateFrom IS NULL OR sj.targetDate >= :baseDateFrom) AND " +

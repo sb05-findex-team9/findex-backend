@@ -51,6 +51,7 @@ public class IndexDataQueryController {
 			}
 		}
 
+		// 페이지네이션된 데이터 조회
 		Page<IndexData> indexDataPage = indexDataQueryService.getIndexDataList(
 			indexInfoId, startDate, endDate, lastId, sortField, sortDirection, size);
 
@@ -66,12 +67,15 @@ public class IndexDataQueryController {
 			nextIdAfter = lastIdInPage.toString();
 		}
 
+		// 항상 전체 조건에 맞는 실제 총 개수를 DB에서 조회
+		long actualTotalElements = indexDataQueryService.getTotalCount(indexInfoId, startDate, endDate);
+
 		PagedResponseDto<IndexDataResponseDto> response = PagedResponseDto.<IndexDataResponseDto>builder()
 			.content(content)
 			.nextCursor(nextCursor)
 			.nextIdAfter(nextIdAfter)
 			.size(content.size())
-			.totalElements((int)indexDataPage.getTotalElements())
+			.totalElements((int)actualTotalElements)
 			.hasNext(indexDataPage.hasNext())
 			.build();
 

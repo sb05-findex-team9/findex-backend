@@ -174,6 +174,14 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 			));
 	}
 
+	@Query("SELECT COUNT(i) FROM IndexData i WHERE " +
+		"(:indexInfoId IS NULL OR i.indexInfo.id = :indexInfoId) AND " +
+		"(:startDate IS NULL OR i.baseDate >= :startDate) AND " +
+		"(:endDate IS NULL OR i.baseDate <= :endDate)")
+	long countIndexDataWithFilters(@Param("indexInfoId") Long indexInfoId,
+		@Param("startDate") LocalDate startDate,
+		@Param("endDate") LocalDate endDate);
+
 	Optional<IndexData> findTopByIndexInfoOrderByBaseDateDesc(IndexInfo indexInfo);
 
 	Optional<IndexData> findTopByIndexInfoAndBaseDateLessThanEqualOrderByBaseDateDesc(IndexInfo indexInfo, LocalDate baseDate);

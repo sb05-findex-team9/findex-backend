@@ -14,11 +14,13 @@ import com.codeit.findex.indexInfo.domain.IndexInfo;
 import com.codeit.findex.indexInfo.repository.IndexInfoRepository;
 import com.codeit.findex.openApi.domain.SyncJob;
 import com.codeit.findex.openApi.dto.request.IndexDataSyncRequest;
-import com.codeit.findex.openApi.dto.response.SyncJobResponseDto;
+import com.codeit.findex.openApi.dto.response.SyncJobResponse;
 import com.codeit.findex.openApi.repository.SyncJobRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -29,14 +31,15 @@ public class IndexDataSyncService {
 	private final IndexInfoRepository indexInfoRepository;
 	private final IndexDataRepository indexDataRepository;
 
-	public List<SyncJobResponseDto> syncIndexData(IndexDataSyncRequest request) {
-		List<SyncJobResponseDto> results = new ArrayList<>();
+	public List<SyncJobResponse> syncIndexData(IndexDataSyncRequest request) {
+		List<SyncJobResponse> results = new ArrayList<>();
 
 		if (request.indexInfoIds() == null || request.indexInfoIds().isEmpty()) {
 			throw new IllegalArgumentException("indexInfoIds는 필수값입니다.");
 		}
 
 		Long indexInfoId = request.getFirstIndexInfoId();
+		log.info("Starting index data sync for indexInfoId: {}", indexInfoId);
 
 		IndexInfo indexInfo = indexInfoRepository.findById(indexInfoId)
 			.orElseThrow(() -> new IllegalArgumentException("지수 정보를 찾을 수 없습니다: " + indexInfoId));
@@ -50,20 +53,27 @@ public class IndexDataSyncService {
 				request.baseDateTo()
 			);
 
+			log.info("Found {} index data records to sync", indexDataList.size());
+
 			for (IndexData indexData : indexDataList) {
 				SyncJob syncJob = SyncJob.builder()
 					.jobType("INDEX_DATA")
 					.indexInfo(indexInfo)
 					.targetDate(indexData.getBaseDate())
-					.worker("175.125.151.156")
+					.worker("175.125.151.156") // TODO: 동적으로 worker IP 얻어오기
 					.jobTime(LocalDateTime.now())
 					.result("SUCCESS")
 					.build();
 
 				SyncJob saved = syncJobRepository.save(syncJob);
-				results.add(SyncJobResponseDto.from(saved));
+				results.add(SyncJobResponse.from(saved));
 			}
+
+			log.info("Successfully synced {} index data records", results.size());
+
 		} catch (Exception e) {
+			log.error("Failed to sync index data for indexInfoId: {}", indexInfoId, e);
+
 			SyncJob failedJob = SyncJob.builder()
 				.jobType("INDEX_DATA")
 				.indexInfo(indexInfo)
@@ -74,7 +84,7 @@ public class IndexDataSyncService {
 				.build();
 
 			SyncJob saved = syncJobRepository.save(failedJob);
-			results.add(SyncJobResponseDto.from(saved));
+			results.add(SyncJobResponse.from(saved));
 		}
 
 		return results;
