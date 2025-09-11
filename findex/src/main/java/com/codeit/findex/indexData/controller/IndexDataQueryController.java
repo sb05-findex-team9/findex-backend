@@ -27,6 +27,7 @@ public class IndexDataQueryController {
 	private final IndexDataQueryService indexDataQueryService;
 
 	// 지수 데이터 목록 조회
+	// IndexDataQueryController.java
 	@GetMapping
 	public ResponseEntity<PagedResponseDto<IndexDataResponseDto>> getIndexDataList(
 		@RequestParam(required = false) Long indexInfoId,
@@ -39,25 +40,24 @@ public class IndexDataQueryController {
 		@RequestParam(required = false, defaultValue = "10") Integer size) {
 
 		Long lastId = null;
-		if (cursor != null && !cursor.trim().isEmpty()) {
+		if (cursor != null && !cursor.isBlank()) {
 			try {
 				lastId = Long.parseLong(cursor);
 			} catch (NumberFormatException ignored) {
 			}
-		} else if (idAfter != null && !idAfter.trim().isEmpty()) {
+		} else if (idAfter != null && !idAfter.isBlank()) {
 			try {
 				lastId = Long.parseLong(idAfter);
 			} catch (NumberFormatException ignored) {
 			}
 		}
 
-		// 페이지네이션된 데이터 조회
 		Page<IndexData> indexDataPage = indexDataQueryService.getIndexDataList(
 			indexInfoId, startDate, endDate, lastId, sortField, sortDirection, size);
 
 		List<IndexDataResponseDto> content = indexDataPage.getContent().stream()
 			.map(IndexDataResponseDto::from)
-			.collect(Collectors.toList());
+			.toList();
 
 		String nextCursor = null;
 		String nextIdAfter = null;
@@ -67,7 +67,7 @@ public class IndexDataQueryController {
 			nextIdAfter = lastIdInPage.toString();
 		}
 
-		// 항상 전체 조건에 맞는 실제 총 개수를 DB에서 조회
+		// ✅ 항상 전체 조건에 맞는 실제 총 개수 조회
 		long actualTotalElements = indexDataQueryService.getTotalCount(indexInfoId, startDate, endDate);
 
 		PagedResponseDto<IndexDataResponseDto> response = PagedResponseDto.<IndexDataResponseDto>builder()
@@ -75,10 +75,11 @@ public class IndexDataQueryController {
 			.nextCursor(nextCursor)
 			.nextIdAfter(nextIdAfter)
 			.size(content.size())
-			.totalElements((int)actualTotalElements)
+			.totalElements((int)actualTotalElements) // 정확한 전체 개수
 			.hasNext(indexDataPage.hasNext())
 			.build();
 
 		return ResponseEntity.ok(response);
 	}
+
 }

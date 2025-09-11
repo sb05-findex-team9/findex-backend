@@ -67,6 +67,7 @@ public class IndexDataQueryService {
 	}
 
 	public long getTotalCount(Long indexInfoId, LocalDate startDate, LocalDate endDate) {
+		// 기존 countIndexDataWithFilters 그대로 사용
 		return indexDataRepository.countIndexDataWithFilters(indexInfoId, startDate, endDate);
 	}
 }

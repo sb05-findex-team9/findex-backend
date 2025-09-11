@@ -24,9 +24,9 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 	List<LocalDate> findExistingDates(@Param("indexInfo") IndexInfo indexInfo,
 		@Param("dates") List<LocalDate> dates);
 
+	// 메인 조회 쿼리들에서 autoSyncConfig JOIN 제거
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
-		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
 		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
 		"AND (:endDate IS NULL OR id.baseDate <= :endDate)")
@@ -38,7 +38,6 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
-		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
 		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
 		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
@@ -53,7 +52,6 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
-		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
 		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
 		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
@@ -68,7 +66,6 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
-		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE id.indexInfo.id = :indexInfoId " +
 		"AND id.baseDate >= :startDate " +
 		"ORDER BY id.baseDate ASC")
@@ -78,14 +75,12 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
-		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE id.indexInfo.id = :indexInfoId " +
 		"ORDER BY id.baseDate ASC")
 	List<IndexData> findByIndexInfoIdOrderByBaseDateAsc(@Param("indexInfoId") Long indexInfoId);
 
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
-		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE id.indexInfo.id = :indexInfoId " +
 		"AND id.baseDate = :baseDate")
 	Optional<IndexData> findByIndexInfoIdAndBaseDate(
@@ -102,14 +97,12 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
-		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE id.baseDate = :targetDate " +
 		"AND id.closingPrice IS NOT NULL")
 	List<IndexData> findAllByBaseDateWithIndexInfo(@Param("targetDate") LocalDate targetDate);
 
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
-		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE id.baseDate IN :dates " +
 		"AND id.closingPrice IS NOT NULL " +
 		"ORDER BY id.indexInfo.id, id.baseDate")
@@ -126,7 +119,6 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
-		"LEFT JOIN FETCH ii.autoSyncConfig " +
 		"WHERE id.indexInfo.id = :indexInfoId " +
 		"AND id.baseDate = :baseDate")
 	Optional<IndexData> findByIndexInfoIdAndBaseDateWithIndexInfo(
@@ -174,6 +166,7 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 			));
 	}
 
+	// COUNT 쿼리는 JOIN 없이 유지 (이미 올바름)
 	@Query("SELECT COUNT(i) FROM IndexData i WHERE " +
 		"(:indexInfoId IS NULL OR i.indexInfo.id = :indexInfoId) AND " +
 		"(:startDate IS NULL OR i.baseDate >= :startDate) AND " +
@@ -184,7 +177,8 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 
 	Optional<IndexData> findTopByIndexInfoOrderByBaseDateDesc(IndexInfo indexInfo);
 
-	Optional<IndexData> findTopByIndexInfoAndBaseDateLessThanEqualOrderByBaseDateDesc(IndexInfo indexInfo, LocalDate baseDate);
+	Optional<IndexData> findTopByIndexInfoAndBaseDateLessThanEqualOrderByBaseDateDesc(IndexInfo indexInfo,
+		LocalDate baseDate);
 
 	@Query("SELECT id FROM IndexData id " +
 		"LEFT JOIN FETCH id.indexInfo ii " +
