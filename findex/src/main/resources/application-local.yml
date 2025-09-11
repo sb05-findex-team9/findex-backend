@@ -25,6 +25,23 @@ logging:
     org.hibernate.SQL: debug
     org.hibernate.orm.jdbc.bind: trace
 
+# scheduler
+# 전체 수집 스케줄러
+#findex:
+#  scheduler:
+#    fullfetch:
+#      enabled: true
+#      run-on-startup: true
+#      cron: "0 0 6 * * *"   # 원하는 시간
+#      zone: "Asia/Seoul"
+
+# 자동 연동 스케줄러
+auto-sync:
+  scheduler:
+    enabled: true
+    cron: "0 0 6 * * *"     # AutoSync: 매일 06:05
+    zone: "Asia/Seoul"
+
 # API
 api:
   service-key: '4e45f20039574765ef0b52364e6ba488dde012627aef89847dccacb39fb77f0d'

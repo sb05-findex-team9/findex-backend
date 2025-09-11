@@ -237,5 +237,16 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 	long countIndexDataWithFilters(@Param("indexInfoId") Long indexInfoId,
 		@Param("startDate") LocalDate startDate,
 		@Param("endDate") LocalDate endDate);
+	@Query("SELECT id FROM IndexData id " +
+		"LEFT JOIN FETCH id.indexInfo ii " +
+		"WHERE id.sourceType = :sourceType " +
+		"AND id.baseDate >= :startDate " +
+		"AND id.baseDate <= :endDate " +
+		"ORDER BY id.baseDate DESC")
+	List<IndexData> findUserModifiedDataInDateRange(
+		@Param("sourceType") String sourceType,
+		@Param("startDate") LocalDate startDate,
+		@Param("endDate") LocalDate endDate
+	);
 
 }
