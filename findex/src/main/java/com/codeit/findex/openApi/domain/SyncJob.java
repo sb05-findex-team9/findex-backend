@@ -54,4 +54,11 @@ public class SyncJob {
 	@JoinColumn(name = "index_info_id", nullable = false, unique = true)
 	private IndexInfo indexInfo;
 
+	public Long getIndexInfoId() {
+		return indexInfo != null ? indexInfo.getId() : null;
+	}
+
+	public String getIndexName() {
+		return indexInfo != null ? indexInfo.getIndexName() : null;
+	}
 }

@@ -1,124 +1,202 @@
 package com.codeit.findex.indexData.service;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.codeit.findex.indexData.domain.IndexData;
 import com.codeit.findex.indexData.domain.PerformancePeriodType;
+import com.codeit.findex.indexData.dto.IndexPerformanceDto;
 import com.codeit.findex.indexData.dto.IndexPerformanceRankResponse;
 import com.codeit.findex.indexData.repository.IndexDataRepository;
 import com.codeit.findex.indexInfo.domain.IndexInfo;
-import com.codeit.findex.indexInfo.repository.IndexInfoRepository;
 
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.util.*;
-import java.util.stream.Collectors;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class IndexPerformanceService {
 
 	private final IndexDataRepository indexDataRepository;
-	private final IndexInfoRepository indexInfoRepository;
 
 	public List<IndexPerformanceRankResponse> getPerformanceRanking(
 		Long indexInfoId,
 		PerformancePeriodType periodType,
 		Integer limit) {
 
-		// 기본값 설정
-		if (periodType == null) {
+		if (periodType == null)
 			periodType = PerformancePeriodType.DAILY;
-		}
-		if (limit == null || limit <= 0) {
+		if (limit == null || limit <= 0)
 			limit = 10;
-		}
 
-		// 최신 거래일 조회
-		LocalDate latestDate = indexDataRepository.findMaxBaseDate()
-			.orElseThrow(() -> new IllegalStateException("거래 데이터가 없습니다."));
+		log.info("성과 랭킹 조회 시작 - indexInfoId: {}, periodType: {}, limit: {}", indexInfoId, periodType, limit);
 
-		// 비교 기준일 계산
+		LocalDate latestDate = findLatestDateWithSufficientData(limit);
 		LocalDate compareDate = calculateCompareDate(latestDate, periodType);
 
-		List<IndexPerformanceRankResponse> rankings;
+		log.info("날짜 설정 완료 - 최신날짜: {}, 비교날짜: {}", latestDate, compareDate);
 
 		if (indexInfoId != null) {
-			// 특정 지수의 랭킹 조회
-			rankings = getSpecificIndexRanking(indexInfoId, latestDate, compareDate, periodType);
+			return getSpecificIndexRanking(indexInfoId, latestDate, compareDate, periodType);
 		} else {
-			// 전체 지수 랭킹 조회
-			rankings = getAllIndexRanking(latestDate, compareDate, limit);
+			return getAllIndexRankingBatch(latestDate, compareDate, periodType, limit);
 		}
-
-		return rankings;
 	}
 
-	private LocalDate calculateCompareDate(LocalDate baseDate, PerformancePeriodType periodType) {
-		return switch (periodType) {
-			case DAILY -> getPreviousTradingDay(baseDate);
-			case WEEKLY -> baseDate.minusWeeks(1);
-			case MONTHLY -> baseDate.minusMonths(1);
-		};
-	}
+	private LocalDate findLatestDateWithSufficientData(Integer requiredCount) {
+		LocalDate maxDate = indexDataRepository.findMaxBaseDate()
+			.orElseThrow(() -> new IllegalStateException("거래 데이터가 없습니다."));
 
-	private LocalDate getPreviousTradingDay(LocalDate date) {
-		LocalDate previousDay = date.minusDays(1);
-
-		// 주말인 경우 금요일로 조정
-		if (previousDay.getDayOfWeek() == DayOfWeek.SATURDAY) {
-			previousDay = previousDay.minusDays(1);
-		} else if (previousDay.getDayOfWeek() == DayOfWeek.SUNDAY) {
-			previousDay = previousDay.minusDays(2);
-		}
-
-		return previousDay;
-	}
-
-	private List<IndexPerformanceRankResponse> getAllIndexRanking(
-		LocalDate latestDate,
-		LocalDate compareDate,
-		Integer limit) {
-
-		// 모든 지수 정보 조회
-		List<IndexInfo> allIndexInfos = indexInfoRepository.findAll();
-
-		// 성과 계산 및 정렬
-		List<IndexPerformanceData> performanceDataList = new ArrayList<>();
-
-		for (IndexInfo indexInfo : allIndexInfos) {
-			Optional<IndexData> currentDataOpt = indexDataRepository
-				.findByIndexInfoIdAndBaseDate(indexInfo.getId(), latestDate);
-			Optional<IndexData> compareDataOpt = indexDataRepository
-				.findByIndexInfoIdAndBaseDate(indexInfo.getId(), compareDate);
-
-			if (currentDataOpt.isPresent() && compareDataOpt.isPresent()) {
-				IndexPerformanceData perfData = calculatePerformance(
-					indexInfo, currentDataOpt.get(), compareDataOpt.get());
-				performanceDataList.add(perfData);
+		for (int i = 0; i < 10; i++) {
+			LocalDate checkDate = maxDate.minusDays(i);
+			// 엔티티 로드 없이 개수만 조회
+			long dataCount = indexDataRepository.countByBaseDateAndClosingPriceIsNotNull(checkDate);
+			log.debug("날짜 {} 데이터 개수: {}", checkDate, dataCount);
+			if (dataCount >= Math.min(requiredCount, 10)) {
+				log.info("충분한 데이터가 있는 날짜 선택: {} ({}개)", checkDate, dataCount);
+				return checkDate;
 			}
 		}
 
-		// 등락률 기준 내림차순 정렬
-		performanceDataList.sort((a, b) ->
-			Float.compare(b.getFluctuationRate(), a.getFluctuationRate()));
+		log.warn("충분한 데이터가 있는 날짜를 찾지 못함. 최신 날짜 사용: {}", maxDate);
+		return maxDate;
+	}
 
-		// 상위 N개만 선택하고 랭킹 부여
-		return performanceDataList.stream()
+	private List<IndexPerformanceRankResponse> getAllIndexRankingBatch(
+		LocalDate latestDate,
+		LocalDate compareDate,
+		PerformancePeriodType periodType,
+		Integer limit) {
+
+		log.info("전체 랭킹 조회 시작 - limit: {}", limit);
+
+		List<IndexPerformanceData> performanceDataList;
+
+		if (periodType == PerformancePeriodType.DAILY) {
+			performanceDataList = getDailyPerformanceData(latestDate, compareDate);
+		} else {
+			performanceDataList = getPeriodPerformanceData(latestDate, compareDate, periodType);
+		}
+
+		List<IndexPerformanceData> topPerformers = performanceDataList.stream()
+			.sorted((a, b) -> Float.compare(b.getFluctuationRate(), a.getFluctuationRate()))
 			.limit(limit)
-			.map((perfData) -> {
-				int rank = performanceDataList.indexOf(perfData) + 1;
-				return createRankResponse(perfData, rank);
+			.toList();
+
+		List<IndexPerformanceRankResponse> result = new ArrayList<>();
+		for (int i = 0; i < topPerformers.size(); i++) {
+			result.add(createRankResponse(topPerformers.get(i), i + 1));
+		}
+
+		log.info("최종 반환 결과 개수: {}", result.size());
+		return result;
+	}
+
+	private List<IndexPerformanceData> getDailyPerformanceData(LocalDate latestDate, LocalDate compareDate) {
+		List<LocalDate> dates = Arrays.asList(latestDate, compareDate);
+		List<IndexData> allData = indexDataRepository.findAllByBaseDateInWithIndexInfo(dates);
+
+		Map<LocalDate, Map<Long, IndexData>> dataByDate = allData.stream()
+			.collect(Collectors.groupingBy(
+				IndexData::getBaseDate,
+				Collectors.toMap(
+					data -> data.getIndexInfo().getId(),
+					data -> data,
+					(existing, replacement) -> existing
+				)
+			));
+
+		Map<Long, IndexData> currentDataMap = dataByDate.getOrDefault(latestDate, Collections.emptyMap());
+		Map<Long, IndexData> compareDataMap = dataByDate.getOrDefault(compareDate, Collections.emptyMap());
+
+		return currentDataMap.entrySet().stream()
+			.map(entry -> {
+				Long id = entry.getKey();
+				IndexData currentData = entry.getValue();
+				IndexData compareData = compareDataMap.get(id);
+
+				if (currentData.getClosingPrice() == null || compareData == null
+					|| compareData.getClosingPrice() == null) {
+					return null;
+				}
+
+				float currentPrice = currentData.getClosingPrice().floatValue();
+				float comparePrice = compareData.getClosingPrice().floatValue();
+
+				if (currentPrice == 0f || comparePrice == 0f) {
+					return null;
+				}
+
+				float versus = currentPrice - comparePrice;
+				float fluctuationRate = calculateFluctuationRate(currentPrice, comparePrice);
+
+				return IndexPerformanceData.builder()
+					.indexInfo(currentData.getIndexInfo()) // 이미 JOIN FETCH된 데이터
+					.currentPrice(currentPrice)
+					.beforePrice(comparePrice)
+					.versus(versus)
+					.fluctuationRate(fluctuationRate)
+					.build();
 			})
+			.filter(Objects::nonNull)
+			.collect(Collectors.toList());
+	}
+
+	private List<IndexPerformanceData> getPeriodPerformanceData(LocalDate latestDate, LocalDate compareDate,
+		PerformancePeriodType periodType) {
+		List<IndexData> currentDataList = indexDataRepository.findAllByBaseDateWithIndexInfo(latestDate);
+
+		Set<Long> indexInfoIds = currentDataList.stream()
+			.map(data -> data.getIndexInfo().getId())
+			.collect(Collectors.toSet());
+
+		Map<Long, Double> averagePriceMap = indexDataRepository.findAverageClosingPricesByIndexInfosBetween(
+			new ArrayList<>(indexInfoIds), compareDate, latestDate
+		);
+
+		return currentDataList.stream()
+			.map(currentData -> {
+				Long indexInfoId = currentData.getIndexInfo().getId();
+
+				if (currentData.getClosingPrice() == null) {
+					return null;
+				}
+
+				float currentPrice = currentData.getClosingPrice().floatValue();
+				Double averagePrice = averagePriceMap.get(indexInfoId);
+
+				if (averagePrice == null || currentPrice == 0f || averagePrice == 0.0) {
+					return null;
+				}
+
+				float comparePrice = averagePrice.floatValue();
+				float versus = currentPrice - comparePrice;
+				float fluctuationRate = calculateFluctuationRate(currentPrice, comparePrice);
+
+				return IndexPerformanceData.builder()
+					.indexInfo(currentData.getIndexInfo())
+					.currentPrice(currentPrice)
+					.beforePrice(comparePrice)
+					.versus(versus)
+					.fluctuationRate(fluctuationRate)
+					.build();
+			})
+			.filter(Objects::nonNull)
 			.collect(Collectors.toList());
 	}
 
@@ -128,58 +206,82 @@ public class IndexPerformanceService {
 		LocalDate compareDate,
 		PerformancePeriodType periodType) {
 
-		IndexInfo indexInfo = indexInfoRepository.findById(indexInfoId)
-			.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 지수 정보입니다."));
+		log.info("특정 지수 랭킹 조회 시작 - indexInfoId: {}", indexInfoId);
 
-		// 해당 지수의 최신 데이터 조회
-		Optional<IndexData> currentDataOpt = indexDataRepository
-			.findByIndexInfoIdAndBaseDate(indexInfoId, latestDate);
+		IndexData currentIndexData = indexDataRepository
+			.findByIndexInfoIdAndBaseDateWithIndexInfo(indexInfoId, latestDate)
+			.orElseThrow(() -> new IllegalArgumentException("해당 날짜의 지수 데이터가 없습니다."));
 
-		if (currentDataOpt.isEmpty()) {
-			// 최신 거래일에 데이터가 없으면 가장 최근 데이터 조회
-			Optional<LocalDate> maxDate = indexDataRepository
-				.findMaxBaseDateByIndexInfoId(indexInfoId);
-			if (maxDate.isEmpty()) {
-				throw new IllegalArgumentException("해당 지수의 거래 데이터가 없습니다.");
-			}
-			latestDate = maxDate.get();
-			compareDate = calculateCompareDate(latestDate, periodType);
-			currentDataOpt = indexDataRepository.findByIndexInfoIdAndBaseDate(indexInfoId, latestDate);
+		IndexInfo indexInfo = currentIndexData.getIndexInfo(); // 이미 JOIN FETCH된 데이터
+
+		float currentPrice = currentIndexData.getClosingPrice() != null ?
+			currentIndexData.getClosingPrice().floatValue() : 0f;
+
+		float comparePrice;
+		if (periodType == PerformancePeriodType.DAILY) {
+			comparePrice = indexDataRepository
+				.findByIndexInfoIdAndBaseDate(indexInfoId, compareDate)
+				.map(d -> d.getClosingPrice() != null ? d.getClosingPrice().floatValue() : 0f)
+				.orElse(0f);
+		} else {
+			comparePrice = indexDataRepository
+				.findAverageClosingPriceByIndexInfoBetween(indexInfoId, compareDate, latestDate)
+				.orElse(0.0)
+				.floatValue();
 		}
 
-		Optional<IndexData> compareDataOpt = indexDataRepository
-			.findByIndexInfoIdAndBaseDate(indexInfoId, compareDate);
+		IndexPerformanceData perfData = IndexPerformanceData.builder()
+			.indexInfo(indexInfo)
+			.currentPrice(currentPrice)
+			.beforePrice(comparePrice)
+			.versus(currentPrice - comparePrice)
+			.fluctuationRate(calculateFluctuationRate(currentPrice, comparePrice))
+			.build();
 
-		if (currentDataOpt.isEmpty() || compareDataOpt.isEmpty()) {
-			throw new IllegalArgumentException("성과 계산을 위한 데이터가 부족합니다.");
-		}
+		int rank = calculateRankOptimized(perfData.getFluctuationRate(), latestDate, compareDate, periodType);
 
-		IndexPerformanceData perfData = calculatePerformance(
-			indexInfo, currentDataOpt.get(), compareDataOpt.get());
-
-		// 전체 지수 중 순위 계산
-		int rank = calculateRankAmongAll(perfData.getFluctuationRate(), latestDate, compareDate);
+		log.info("특정 지수 랭킹 계산 완료 - 지수명: {}, 등락률: {}%, 순위: {}",
+			indexInfo.getIndexName(), perfData.getFluctuationRate(), rank);
 
 		return List.of(createRankResponse(perfData, rank));
 	}
 
-	private int calculateRankAmongAll(float targetFluctuationRate,
-		LocalDate latestDate,
-		LocalDate compareDate) {
-		List<IndexInfo> allIndexInfos = indexInfoRepository.findAll();
+	private int calculateRankOptimized(float targetFluctuationRate, LocalDate latestDate, LocalDate compareDate,
+		PerformancePeriodType periodType) {
+		if (periodType == PerformancePeriodType.DAILY) {
+			return calculateDailyRank(targetFluctuationRate, latestDate, compareDate);
+		} else {
+			return calculatePeriodRank(targetFluctuationRate, latestDate, compareDate);
+		}
+	}
+
+	private int calculateDailyRank(float targetFluctuationRate, LocalDate latestDate, LocalDate compareDate) {
+		List<LocalDate> dates = Arrays.asList(latestDate, compareDate);
+		List<IndexData> allData = indexDataRepository.findAllByBaseDateInWithIndexInfo(dates);
+
+		Map<LocalDate, Map<Long, IndexData>> dataByDate = allData.stream()
+			.collect(Collectors.groupingBy(
+				IndexData::getBaseDate,
+				Collectors.toMap(
+					data -> data.getIndexInfo().getId(),
+					data -> data,
+					(existing, replacement) -> existing
+				)
+			));
+
+		Map<Long, IndexData> currentDataMap = dataByDate.getOrDefault(latestDate, Collections.emptyMap());
+		Map<Long, IndexData> compareDataMap = dataByDate.getOrDefault(compareDate, Collections.emptyMap());
+
 		int rank = 1;
+		for (Map.Entry<Long, IndexData> entry : currentDataMap.entrySet()) {
+			IndexData currentData = entry.getValue();
+			IndexData compareData = compareDataMap.get(entry.getKey());
 
-		for (IndexInfo indexInfo : allIndexInfos) {
-			Optional<IndexData> currentOpt = indexDataRepository
-				.findByIndexInfoIdAndBaseDate(indexInfo.getId(), latestDate);
-			Optional<IndexData> compareOpt = indexDataRepository
-				.findByIndexInfoIdAndBaseDate(indexInfo.getId(), compareDate);
-
-			if (currentOpt.isPresent() && compareOpt.isPresent()) {
+			if (currentData.getClosingPrice() != null && compareData != null && compareData.getClosingPrice() != null) {
 				float fluctuationRate = calculateFluctuationRate(
-					currentOpt.get().getClosingPrice(),
-					compareOpt.get().getClosingPrice());
-
+					currentData.getClosingPrice().floatValue(),
+					compareData.getClosingPrice().floatValue()
+				);
 				if (fluctuationRate > targetFluctuationRate) {
 					rank++;
 				}
@@ -189,59 +291,68 @@ public class IndexPerformanceService {
 		return rank;
 	}
 
-	private IndexPerformanceData calculatePerformance(
-		IndexInfo indexInfo,
-		IndexData currentData,
-		IndexData compareData) {
+	private int calculatePeriodRank(float targetFluctuationRate, LocalDate latestDate, LocalDate compareDate) {
+		List<IndexPerformanceDto> currentDataList = indexDataRepository.findAllByBaseDateWithIndexInfoDto(latestDate);
 
-		BigDecimal currentPrice = currentData.getClosingPrice();
-		BigDecimal beforePrice = compareData.getClosingPrice();
+		Set<Long> indexInfoIds = currentDataList.stream()
+			.map(IndexPerformanceDto::getIndexInfoId)
+			.collect(Collectors.toSet());
 
-		if (currentPrice == null || beforePrice == null || beforePrice.compareTo(BigDecimal.ZERO) == 0) {
-			return IndexPerformanceData.builder()
-				.indexInfo(indexInfo)
-				.currentPrice(currentPrice != null ? currentPrice.floatValue() : 0f)
-				.beforePrice(beforePrice != null ? beforePrice.floatValue() : 0f)
-				.versus(0f)
-				.fluctuationRate(0f)
-				.build();
+		Map<Long, Double> averagePriceMap = indexDataRepository.findAverageClosingPricesByIndexInfosBetween(
+			new ArrayList<>(indexInfoIds), compareDate, latestDate
+		);
+
+		int rank = 1;
+		for (IndexPerformanceDto currentData : currentDataList) {
+			if (currentData.getClosingPrice() == null)
+				continue;
+
+			Long indexInfoId = currentData.getIndexInfoId();
+			Double averagePrice = averagePriceMap.get(indexInfoId);
+
+			if (averagePrice != null && averagePrice > 0) {
+				float fluctuationRate = calculateFluctuationRate(
+					currentData.getClosingPriceAsFloat(),
+					averagePrice.floatValue()
+				);
+				if (fluctuationRate > targetFluctuationRate) {
+					rank++;
+				}
+			}
 		}
 
-		// 전일 대비 = 현재가 - 이전가
-		BigDecimal versus = currentPrice.subtract(beforePrice);
-
-		// 등락률 = (현재가 - 이전가) / 이전가 * 100
-		float fluctuationRate = calculateFluctuationRate(currentPrice, beforePrice);
-
-		return IndexPerformanceData.builder()
-			.indexInfo(indexInfo)
-			.currentPrice(currentPrice.floatValue())
-			.beforePrice(beforePrice.floatValue())
-			.versus(versus.floatValue())
-			.fluctuationRate(fluctuationRate)
-			.build();
+		return rank;
 	}
 
-	private float calculateFluctuationRate(BigDecimal currentPrice, BigDecimal beforePrice) {
-		if (beforePrice.compareTo(BigDecimal.ZERO) == 0) {
+	private LocalDate calculateCompareDate(LocalDate baseDate, PerformancePeriodType periodType) {
+		LocalDate compareDate = switch (periodType) {
+			case DAILY -> baseDate.minusDays(1);
+			case WEEKLY -> baseDate.minusWeeks(1);
+			case MONTHLY -> baseDate.minusMonths(1);
+		};
+
+		if (compareDate.getDayOfWeek() == DayOfWeek.SATURDAY)
+			compareDate = compareDate.minusDays(1);
+		else if (compareDate.getDayOfWeek() == DayOfWeek.SUNDAY)
+			compareDate = compareDate.minusDays(2);
+
+		return compareDate;
+	}
+
+	private float calculateFluctuationRate(float currentPrice, float comparePrice) {
+		if (comparePrice == 0f)
 			return 0f;
-		}
-
-		return currentPrice.subtract(beforePrice)
-			.divide(beforePrice, 4, RoundingMode.HALF_UP)
-			.multiply(BigDecimal.valueOf(100))
-			.floatValue();
+		return ((currentPrice - comparePrice) / comparePrice) * 100f;
 	}
 
-	private IndexPerformanceRankResponse createRankResponse(
-		IndexPerformanceData perfData,
-		int rank) {
+	private IndexPerformanceRankResponse createRankResponse(IndexPerformanceData perfData, int rank) {
+		IndexInfo indexInfo = perfData.getIndexInfo();
 
 		return IndexPerformanceRankResponse.builder()
 			.performance(IndexPerformanceRankResponse.Performance.builder()
-				.indexInfoId(perfData.getIndexInfo().getId())
-				.indexClassification(perfData.getIndexInfo().getIndexClassification())
-				.indexName(perfData.getIndexInfo().getIndexName())
+				.indexInfoId(indexInfo.getId())
+				.indexClassification(indexInfo.getIndexClassification())
+				.indexName(indexInfo.getIndexName())
 				.versus(perfData.getVersus())
 				.fluctuationRate(perfData.getFluctuationRate())
 				.currentPrice(perfData.getCurrentPrice())
@@ -255,9 +366,9 @@ public class IndexPerformanceService {
 	@Builder
 	private static class IndexPerformanceData {
 		private IndexInfo indexInfo;
-		private Float currentPrice;
-		private Float beforePrice;
-		private Float versus;
-		private Float fluctuationRate;
+		private float currentPrice;
+		private float beforePrice;
+		private float versus;
+		private float fluctuationRate;
 	}
 }
