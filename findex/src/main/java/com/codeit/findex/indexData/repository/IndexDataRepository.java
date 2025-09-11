@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -166,15 +167,6 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 			));
 	}
 
-	// COUNT 쿼리는 JOIN 없이 유지 (이미 올바름)
-	@Query("SELECT COUNT(i) FROM IndexData i WHERE " +
-		"(:indexInfoId IS NULL OR i.indexInfo.id = :indexInfoId) AND " +
-		"(:startDate IS NULL OR i.baseDate >= :startDate) AND " +
-		"(:endDate IS NULL OR i.baseDate <= :endDate)")
-	long countIndexDataWithFilters(@Param("indexInfoId") Long indexInfoId,
-		@Param("startDate") LocalDate startDate,
-		@Param("endDate") LocalDate endDate);
-
 	Optional<IndexData> findTopByIndexInfoOrderByBaseDateDesc(IndexInfo indexInfo);
 
 	Optional<IndexData> findTopByIndexInfoAndBaseDateLessThanEqualOrderByBaseDateDesc(IndexInfo indexInfo,
@@ -201,5 +193,49 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		Sort sort);
 
 	List<IndexData> findByIndexInfoIdAndBaseDateBetween(Long indexInfoId, LocalDate startDate, LocalDate endDate);
+
+	// ===== N+1 문제 해결: Slice 쿼리들에 JOIN FETCH 추가 =====
+	@Query("SELECT id FROM IndexData id " +
+		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
+		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
+		"AND (:endDate IS NULL OR id.baseDate <= :endDate)")
+	Slice<IndexData> findIndexDataWithFiltersSlice(@Param("indexInfoId") Long indexInfoId,
+		@Param("startDate") LocalDate startDate,
+		@Param("endDate") LocalDate endDate,
+		Pageable pageable);
+
+	@Query("SELECT id FROM IndexData id " +
+		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
+		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
+		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
+		"AND (CAST(:lastBaseDate AS date) IS NULL OR id.baseDate > CAST(:lastBaseDate AS date) " +
+		"OR (id.baseDate = CAST(:lastBaseDate AS date) AND id.id > :lastId))")
+	Slice<IndexData> findIndexDataWithFiltersAfterIdAscSlice(@Param("indexInfoId") Long indexInfoId,
+		@Param("startDate") LocalDate startDate,
+		@Param("endDate") LocalDate endDate,
+		@Param("lastBaseDate") LocalDate lastBaseDate,
+		@Param("lastId") Long lastId,
+		Pageable pageable);
+
+	@Query("SELECT id FROM IndexData id " +
+		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
+		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
+		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
+		"AND (CAST(:lastBaseDate AS date) IS NULL OR id.baseDate < CAST(:lastBaseDate AS date) " +
+		"OR (id.baseDate = CAST(:lastBaseDate AS date) AND id.id < :lastId))")
+	Slice<IndexData> findIndexDataWithFiltersAfterIdDescSlice(@Param("indexInfoId") Long indexInfoId,
+		@Param("startDate") LocalDate startDate,
+		@Param("endDate") LocalDate endDate,
+		@Param("lastBaseDate") LocalDate lastBaseDate,
+		@Param("lastId") Long lastId,
+		Pageable pageable);
+
+	@Query("SELECT COUNT(i) FROM IndexData i " +
+		"WHERE (:indexInfoId IS NULL OR i.indexInfo.id = :indexInfoId) " +
+		"AND (:startDate IS NULL OR i.baseDate >= :startDate) " +
+		"AND (:endDate IS NULL OR i.baseDate <= :endDate)")
+	long countIndexDataWithFilters(@Param("indexInfoId") Long indexInfoId,
+		@Param("startDate") LocalDate startDate,
+		@Param("endDate") LocalDate endDate);
 
 }
