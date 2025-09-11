@@ -25,7 +25,8 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long> {
 			    order by 
 			        case when :sortDirection = 'asc' then i.indexClassification end asc,
 			        case when :sortDirection = 'desc' then i.indexClassification end desc,
-			        i.id asc
+			        case when :sortDirection = 'asc' then i.id end asc,
+			        case when :sortDirection = 'desc' then i.id end desc
 			"""
 	)
 	Slice<IndexInfo> findAllByIndexClassificationCursor(
@@ -50,7 +51,8 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long> {
         order by 
             case when :sortDirection = 'asc' then i.indexName end asc,
             case when :sortDirection = 'desc' then i.indexName end desc,
-            i.id asc
+            case when :sortDirection = 'asc' then i.id end asc,
+            case when :sortDirection = 'desc' then i.id end desc
     """
 	)
 	Slice<IndexInfo> findAllByIndexNameCursor(
@@ -75,7 +77,8 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long> {
         order by 
             case when :sortDirection = 'asc' then i.employedItemsCount end asc,
             case when :sortDirection = 'desc' then i.employedItemsCount end desc,
-            i.id asc
+            case when :sortDirection = 'asc' then i.id end asc,
+            case when :sortDirection = 'desc' then i.id end desc
     """
 	)
 	Slice<IndexInfo> findAllByEmployedItemsCountCursor(
@@ -106,4 +109,3 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long> {
 
 	List<IndexInfo> findByFavoriteTrue();
 }
-
