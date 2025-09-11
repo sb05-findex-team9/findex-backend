@@ -51,7 +51,7 @@ public class SyncJob {
 
 	//
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "index_info_id", nullable = false, unique = true)
+	@JoinColumn(name = "index_info_id", nullable = false)
 	private IndexInfo indexInfo;
 
 	public Long getIndexInfoId() {
