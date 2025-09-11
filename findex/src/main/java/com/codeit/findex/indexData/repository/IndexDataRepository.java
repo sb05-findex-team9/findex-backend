@@ -251,13 +251,17 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("endDate") LocalDate endDate
 	);
 
-	// 종가 기준 내림차순 정렬용 커서 페이지네이션
+	/**
+	 * 종가 기준 내림차순 정렬용 커서 페이지네이션
+	 * ORDER BY closingPrice DESC, id ASC 순서로 정렬된 데이터에서
+	 * 마지막 항목 이후의 데이터를 조회
+	 */
 	@Query("SELECT id FROM IndexData id " +
 		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
 		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
 		"AND (:endDate IS NULL OR id.baseDate <= :endDate) " +
 		"AND (:lastClosingPrice IS NULL OR id.closingPrice < :lastClosingPrice " +
-		"OR (id.closingPrice = :lastClosingPrice AND id.id < :lastId))")
+		"OR (id.closingPrice = :lastClosingPrice AND id.id > :lastId))")
 	Slice<IndexData> findIndexDataWithFiltersAfterClosingPriceDescSlice(
 		@Param("indexInfoId") Long indexInfoId,
 		@Param("startDate") LocalDate startDate,
@@ -266,7 +270,11 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
 		@Param("lastId") Long lastId,
 		Pageable pageable);
 
-	// 종가 기준 오름차순 정렬용 커서 페이지네이션
+	/**
+	 * 종가 기준 오름차순 정렬용 커서 페이지네이션
+	 * ORDER BY closingPrice ASC, id ASC 순서로 정렬된 데이터에서
+	 * 마지막 항목 이후의 데이터를 조회
+	 */
 	@Query("SELECT id FROM IndexData id " +
 		"WHERE (:indexInfoId IS NULL OR id.indexInfo.id = :indexInfoId) " +
 		"AND (:startDate IS NULL OR id.baseDate >= :startDate) " +
