@@ -154,8 +154,11 @@ public class AutoSyncConfigService {
 
 	@Transactional
 	public void ensureExists(IndexInfo indexInfo) {
-		if (repository.existsByIndexInfoId(indexInfo.getId()))
+
+		if (repository.existsByIndexInfoId(indexInfo.getId())) {
+			indexInfo.setSourceType("OPEN_API");
 			return;
+		}
 
 		AutoSyncConfig cfg = new AutoSyncConfig();
 		cfg.setIndexInfo(indexInfo);

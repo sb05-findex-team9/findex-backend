@@ -131,17 +131,27 @@ public class IndexInfoService {
 		IndexInfo originIndexInfo = indexInfoRepository.getIndexInfoById(Long.valueOf(id))
 			.orElseThrow(NoSuchElementException::new);
 
+		boolean isChanged = false;
+
 		if (dto.getEmployedItemsCount() != null) {
 			originIndexInfo.setEmployedItemsCount(dto.getEmployedItemsCount());
+			isChanged = true;
 		}
 		if (dto.getBasePointInTime() != null) {
 			originIndexInfo.setBasePointInTime(LocalDate.parse(dto.getBasePointInTime()));
+			isChanged = true;
 		}
 		if (dto.getBaseIndex() != null) {
 			originIndexInfo.setBaseIndex(BigDecimal.valueOf(dto.getBaseIndex()));
+			isChanged = true;
 		}
 		if (dto.getFavorite() != null) {
 			originIndexInfo.setFavorite(dto.getFavorite());
+			isChanged = true;
+		}
+
+		if(isChanged){
+			originIndexInfo.setSourceType("USER");
 		}
 
 		IndexInfo updatedIndexInfo = indexInfoRepository.save(originIndexInfo);
