@@ -2,7 +2,7 @@ spring:
   application:
     name: findex
   datasource:
-    url: postgresql://postgres:BDOsTvqCuwEAPtZLMeYvqfkkXfWadZon@postgres.railway.internal:5432/railway
+    url: jdbc:postgresql://postgres.railway.internal:5432/railway
     username: postgres
     password: BDOsTvqCuwEAPtZLMeYvqfkkXfWadZon
     driver-class-name: org.postgresql.Driver
