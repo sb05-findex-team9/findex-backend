@@ -324,4 +324,60 @@ public class ApiIndexDataService {
 			return null;
 		}
 	}
+	@Transactional
+	public int fetchAndSaveIndexDataFiltered(Set<String> allowedKeys, LocalDate targetDate) {
+		if (allowedKeys == null || allowedKeys.isEmpty() || targetDate == null) {
+			return 0;
+		}
+
+		int pageNo = 1;
+		int numOfRows = 10000;
+		boolean hasMoreData = true;
+		int totalSavedCount = 0;
+
+		while (hasMoreData) {
+			String url = buildApiUrl(pageNo, numOfRows);
+			ApiResponseDto response = restTemplate.getForObject(url, ApiResponseDto.class);
+
+			if (response != null
+				&& response.getResponse() != null
+				&& response.getResponse().getBody() != null
+				&& response.getResponse().getBody().getItems() != null) {
+
+				List<ApiResponseDto.Item> items = response.getResponse().getBody().getItems().getItem();
+
+				if (items != null && !items.isEmpty()) {
+					// 1) 전일(targetDate)만 필터
+					List<ApiResponseDto.Item> filteredByDate = items.stream()
+						.filter(i -> {
+							LocalDate d = parseDate(i.getBasDt());
+							return d != null && d.equals(targetDate);
+						})
+						.toList();
+
+					// 2) enabled 지수만 필터 (키 규칙: idxNm + "_" + idxCsf)
+					List<ApiResponseDto.Item> finalList = filteredByDate.stream()
+						.filter(i -> allowedKeys.contains(i.getIdxNm() + "_" + i.getIdxCsf()))
+						.toList();
+
+					if (!finalList.isEmpty()) {
+						int saved = saveIndexDataBatch(finalList); // 네가 이미 구현한 멱등 저장 로직
+						totalSavedCount += saved;
+					}
+
+					// 페이징 종료 판단
+					int totalCount = response.getResponse().getBody().getTotalCount();
+					hasMoreData = pageNo * numOfRows < totalCount;
+					pageNo++;
+
+				} else {
+					hasMoreData = false;
+				}
+			} else {
+				hasMoreData = false;
+			}
+		}
+
+		return totalSavedCount;
+	}
 }
