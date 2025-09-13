@@ -60,32 +60,39 @@ public class ApiIndexInfoService {
 			throw new RuntimeException("Failed to fetch index info data", e);
 		}
 	}
-
 	private void saveIndexInfo(ApiResponseDto.Item item) {
 		String indexName = item.getIdxNm();
 		String indexClassification = item.getIdxCsf();
 
-		Optional<IndexInfo> existingInfo = indexInfoRepository
-			.findByIndexNameAndIndexClassification(indexName, indexClassification).stream().findFirst();
+		List<IndexInfo> existingInfos = indexInfoRepository
+			.findByIndexNameAndIndexClassification(indexName, indexClassification);
 
-		if (existingInfo.isPresent()) {
-			autoSyncConfigService.ensureExists(existingInfo.get());
+		if (!existingInfos.isEmpty()) {
+			autoSyncConfigService.ensureExists(existingInfos.get(0));
 			return;
 		}
 
-		IndexInfo indexInfo = IndexInfo.builder()
-			.indexName(indexName)
-			.indexClassification(indexClassification)
-			.employedItemsCount(parseInteger(item.getEpyItmsCnt()))
-			.basePointInTime(parseDate(item.getBasPntm()))
-			.baseIndex(parseBigDecimal(item.getBasIdx()))
-			.build();
+		try {
+			IndexInfo indexInfo = IndexInfo.builder()
+				.indexName(indexName)
+				.indexClassification(indexClassification)
+				.employedItemsCount(parseInteger(item.getEpyItmsCnt()))
+				.basePointInTime(parseDate(item.getBasPntm()))
+				.baseIndex(parseBigDecimal(item.getBasIdx()))
+				.build();
 
+			IndexInfo saved = indexInfoRepository.save(indexInfo);
+			autoSyncConfigService.ensureExists(saved);
 
-		IndexInfo saved = indexInfoRepository.save(indexInfo);
-		autoSyncConfigService.ensureExists(saved);
+		} catch (org.springframework.dao.DataIntegrityViolationException e) {
+			List<IndexInfo> existing = indexInfoRepository
+				.findByIndexNameAndIndexClassification(indexName, indexClassification);
+			if (!existing.isEmpty()) {
+				autoSyncConfigService.ensureExists(existing.get(0));
+			}
+			System.out.println("Duplicate key detected for: " + indexName + ", skipping...");
+		}
 	}
-
 	private String buildApiUrl(int pageNo, int numOfRows) {
 		return UriComponentsBuilder.fromHttpUrl(apiUrl)
 			.queryParam("serviceKey", serviceKey)
