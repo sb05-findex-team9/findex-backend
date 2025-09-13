@@ -31,3 +31,8 @@ auto-sync:
     enabled: true
     cron: "0 5 6 * * *"
     zone: "Asia/Seoul"
+
+# API
+api:
+  service-key: '4e45f20039574765ef0b52364e6ba488dde012627aef89847dccacb39fb77f0d'
+  stock-url: 'https://apis.data.go.kr/1160100/service/GetMarketIndexInfoService/getStockMarketIndex'
