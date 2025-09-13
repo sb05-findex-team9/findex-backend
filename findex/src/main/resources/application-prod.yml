@@ -2,14 +2,14 @@ spring:
   application:
     name: findex
   datasource:
-    url: jdbc:postgresql://localhost:5432/findex
-    username: findex_user
-    password: findex1234
+    url: postgresql://postgres:BDOsTvqCuwEAPtZLMeYvqfkkXfWadZon@postgres.railway.internal:5432/railway
+    username: postgres
+    password: BDOsTvqCuwEAPtZLMeYvqfkkXfWadZon
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -23,12 +23,11 @@ spring:
 # log
 logging:
   level:
-    org.hibernate.SQL: debug
-    org.hibernate.orm.jdbc.bind: trace
+    org.hibernate.SQL: info
+    org.hibernate.orm.jdbc.bind: info
 
 auto-sync:
   scheduler:
     enabled: true
-    #    cron: "*/20 * * * * *"   # 20초마다 test용
     cron: "0 5 6 * * *"
     zone: "Asia/Seoul"
