@@ -1,34 +1,45 @@
 spring:
   application:
     name: findex
+
   datasource:
     url: jdbc:postgresql://postgres.railway.internal:5432/railway
     username: postgres
     password: BDOsTvqCuwEAPtZLMeYvqfkkXfWadZon
     driver-class-name: org.postgresql.Driver
-#    url: jdbc:postgresql://localhost:5432/findex
-#    username: findex_user
-#    password: findex1234
-#    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
-        highlight_sql: true
-        use_sql_comments: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
         physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
         jdbc.time_zone: UTC
+        default_batch_fetch_size: 1000
+        jdbc.batch_size: 50
+        order_inserts: true
+        order_updates: true
+        format_sql: false
+        highlight_sql: false
+        use_sql_comments: false
 
-# log
 logging:
   level:
-    org.hibernate.SQL: info
-    org.hibernate.orm.jdbc.bind: info
+    root: INFO
+    org.springframework: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
 
 auto-sync:
   scheduler:
@@ -36,7 +47,5 @@ auto-sync:
     cron: "0 5 6 * * *"
     zone: "Asia/Seoul"
 
-# API
 api:
-  service-key: '4e45f20039574765ef0b52364e6ba488dde012627aef89847dccacb39fb77f0d'
-  stock-url: 'https://apis.data.go.kr/1160100/service/GetMarketIndexInfoService/getStockMarketIndex'
+  service-ke
