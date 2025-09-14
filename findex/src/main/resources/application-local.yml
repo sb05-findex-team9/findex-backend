@@ -39,8 +39,8 @@ logging:
 auto-sync:
   scheduler:
     enabled: true
-    cron: "*/20 * * * * *"   # 20초마다 test용
-#    cron: "0 0 6 * * *"     # AutoSync: 매일 06:05
+#    cron: "*/20 * * * * *"   # 20초마다 test용
+    cron: "0 0 6 * * *"     # AutoSync: 매일 06:05
     zone: "Asia/Seoul"
 
 # API
