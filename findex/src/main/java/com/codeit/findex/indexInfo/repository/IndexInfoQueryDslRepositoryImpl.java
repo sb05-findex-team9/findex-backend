@@ -9,6 +9,7 @@ import com.codeit.findex.indexInfo.repository.dto.FindAllDto;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.ComparableExpressionBase;
+import com.querydsl.core.types.dsl.StringPath;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ public class IndexInfoQueryDslRepositoryImpl implements IndexInfoQueryDslReposit
 	private final JPAQueryFactory queryFactory;
 
 	@Override
-	public List<IndexInfo> findAllByConditionWithPage(FindAllDto dto) {
+	public List<IndexInfo> findAllByConditionWithSlice(FindAllDto dto) {
 		return queryFactory
 			.selectFrom(indexInfo)
 			.where(
@@ -35,7 +36,7 @@ public class IndexInfoQueryDslRepositoryImpl implements IndexInfoQueryDslReposit
 			.fetch();
 	}
 
-	private BooleanExpression contains(com.querydsl.core.types.dsl.StringPath field, String value) {
+	private BooleanExpression contains(StringPath field, String value) {
 		return value == null ? null : field.contains(value);
 	}
 

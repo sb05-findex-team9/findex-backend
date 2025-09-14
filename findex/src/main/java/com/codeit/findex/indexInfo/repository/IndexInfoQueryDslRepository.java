@@ -7,5 +7,5 @@ import com.codeit.findex.indexInfo.repository.dto.FindAllDto;
 
 public interface IndexInfoQueryDslRepository {
 
-	List<IndexInfo> findAllByConditionWithPage(FindAllDto findAllDto);
+	List<IndexInfo> findAllByConditionWithSlice(FindAllDto findAllDto);
 }

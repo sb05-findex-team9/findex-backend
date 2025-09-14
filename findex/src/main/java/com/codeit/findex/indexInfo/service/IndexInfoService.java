@@ -5,13 +5,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.codeit.findex.indexInfo.domain.IndexInfo;
@@ -24,7 +18,6 @@ import com.codeit.findex.indexInfo.dto.response.IndexInfoGetResponseDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoSummaryResponseDto;
 import com.codeit.findex.indexInfo.dto.response.IndexInfoUpdateResponseDto;
 import com.codeit.findex.indexInfo.mapper.IndexInfoMapper;
-import com.codeit.findex.indexInfo.repository.IndexInfoQueryDslRepositoryImpl;
 import com.codeit.findex.indexInfo.repository.IndexInfoRepository;
 import com.codeit.findex.indexInfo.repository.dto.FindAllDto;
 import com.codeit.findex.indexInfo.repository.dto.IndexInfoQueryDslMapper;
@@ -45,7 +38,7 @@ public class IndexInfoService {
 			dto.getIndexClassification(), dto.getIndexName(), dto.getFavorite()
 		);
 
-		List<IndexInfo> indexInfos = indexInfoRepository.findAllByConditionWithPage(findAllDto);
+		List<IndexInfo> indexInfos = indexInfoRepository.findAllByConditionWithSlice(findAllDto);
 
 		List<IndexInfo> actualContent;
 		String nextCursor = null;
