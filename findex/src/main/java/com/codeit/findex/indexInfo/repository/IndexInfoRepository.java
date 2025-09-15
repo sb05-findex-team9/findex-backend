@@ -12,7 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 import com.codeit.findex.indexInfo.domain.IndexInfo;
 
-public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long> {
+public interface IndexInfoRepository extends JpaRepository<IndexInfo,Long>, IndexInfoQueryDslRepository{
 	@Query(
 		value = """
 			    select i from IndexInfo i
