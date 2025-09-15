@@ -5,30 +5,29 @@ import java.util.List;
 import org.springframework.stereotype.Repository;
 
 import com.codeit.findex.indexInfo.domain.IndexInfo;
+import com.codeit.findex.indexInfo.domain.QIndexInfo;
 import com.codeit.findex.indexInfo.repository.dto.FindAllDto;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.core.types.dsl.ComparableExpressionBase;
 import com.querydsl.core.types.dsl.StringPath;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
 import lombok.RequiredArgsConstructor;
-
-import static com.codeit.findex.indexInfo.domain.QIndexInfo.indexInfo;
 
 @Repository
 @RequiredArgsConstructor
 public class IndexInfoQueryDslRepositoryImpl implements IndexInfoQueryDslRepository {
 
 	private final JPAQueryFactory queryFactory;
+	private final QIndexInfo qIndexInfo = QIndexInfo.indexInfo;
 
 	@Override
 	public List<IndexInfo> findAllByConditionWithSlice(FindAllDto dto) {
 		return queryFactory
-			.selectFrom(indexInfo)
+			.selectFrom(qIndexInfo)
 			.where(
-				contains(indexInfo.indexClassification, dto.getIndexClassification()),
-				contains(indexInfo.indexName, dto.getIndexName()),
+				contains(qIndexInfo.indexClassification, dto.getIndexClassification()),
+				contains(qIndexInfo.indexName, dto.getIndexName()),
 				cursorCondition(dto)
 			)
 			.orderBy(getOrderSpecifiers(dto))
@@ -49,17 +48,21 @@ public class IndexInfoQueryDslRepositoryImpl implements IndexInfoQueryDslReposit
 		switch (sortField) {
 			case "indexClassification":
 				return isAsc
-					? indexInfo.indexClassification.gt(dto.getCursor()).or(indexInfo.indexClassification.eq(dto.getCursor()).and(indexInfo.id.gt(dto.getIdAfter())))
-					: indexInfo.indexClassification.lt(dto.getCursor()).or(indexInfo.indexClassification.eq(dto.getCursor()).and(indexInfo.id.lt(dto.getIdAfter())));
+					? qIndexInfo.indexClassification.gt(dto.getCursor()).or(
+					qIndexInfo.indexClassification.eq(dto.getCursor()).and(qIndexInfo.id.gt(dto.getIdAfter())))
+					: qIndexInfo.indexClassification.lt(dto.getCursor()).or(
+					qIndexInfo.indexClassification.eq(dto.getCursor()).and(qIndexInfo.id.lt(dto.getIdAfter())));
 			case "indexName":
 				return isAsc
-					? indexInfo.indexName.gt(dto.getCursor()).or(indexInfo.indexName.eq(dto.getCursor()).and(indexInfo.id.gt(dto.getIdAfter())))
-					: indexInfo.indexName.lt(dto.getCursor()).or(indexInfo.indexName.eq(dto.getCursor()).and(indexInfo.id.lt(dto.getIdAfter())));
+					? qIndexInfo.indexName.gt(dto.getCursor()).or(
+					qIndexInfo.indexName.eq(dto.getCursor()).and(qIndexInfo.id.gt(dto.getIdAfter())))
+					: qIndexInfo.indexName.lt(dto.getCursor()).or(
+					qIndexInfo.indexName.eq(dto.getCursor()).and(qIndexInfo.id.lt(dto.getIdAfter())));
 			case "employedItemsCount":
 				Integer count = Integer.parseInt(dto.getCursor());
 				return isAsc
-					? indexInfo.employedItemsCount.gt(count).or(indexInfo.employedItemsCount.eq(count).and(indexInfo.id.gt(dto.getIdAfter())))
-					: indexInfo.employedItemsCount.lt(count).or(indexInfo.employedItemsCount.eq(count).and(indexInfo.id.lt(dto.getIdAfter())));
+					? qIndexInfo.employedItemsCount.gt(count).or(qIndexInfo.employedItemsCount.eq(count).and(qIndexInfo.id.gt(dto.getIdAfter())))
+					: qIndexInfo.employedItemsCount.lt(count).or(qIndexInfo.employedItemsCount.eq(count).and(qIndexInfo.id.lt(dto.getIdAfter())));
 			default:
 				return null;
 		}
@@ -71,21 +74,21 @@ public class IndexInfoQueryDslRepositoryImpl implements IndexInfoQueryDslReposit
 		OrderSpecifier<?> primary;
 		switch (dto.getSortField()) {
 			case "indexClassification":
-				primary = isAsc ? indexInfo.indexClassification.asc() : indexInfo.indexClassification.desc();
+				primary = isAsc ? qIndexInfo.indexClassification.asc() : qIndexInfo.indexClassification.desc();
 				break;
 			case "indexName":
-				primary = isAsc ? indexInfo.indexName.asc() : indexInfo.indexName.desc();
+				primary = isAsc ? qIndexInfo.indexName.asc() : qIndexInfo.indexName.desc();
 				break;
 			case "employedItemsCount":
-				primary = isAsc ? indexInfo.employedItemsCount.asc() : indexInfo.employedItemsCount.desc();
+				primary = isAsc ? qIndexInfo.employedItemsCount.asc() : qIndexInfo.employedItemsCount.desc();
 				break;
 			default:
-				primary = indexInfo.id.asc();
+				primary = qIndexInfo.id.asc();
 		}
 
 		return new OrderSpecifier<?>[] {
 			primary,
-			isAsc ? indexInfo.id.asc() : indexInfo.id.desc()
+			isAsc ? qIndexInfo.id.asc() : qIndexInfo.id.desc()
 		};
 	}
 }
