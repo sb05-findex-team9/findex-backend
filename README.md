@@ -4,10 +4,12 @@
 
 ## **팀원 구성**
 
-정기주 (https://github.com/jeonggiju)
-권지인 (https://github.com/kjn4101)
-김수연 (https://github.com/sooyeonz)
-김찬혁 (https://github.com/chanhyeok0201)
+| 팀원 | GitHub |
+| --- | --- |
+| 정기주 | [github.com/jeonggiju](https://github.com/jeonggiju) |
+| 권지인 | [github.com/kjn4101](https://github.com/kjn4101) |
+| 김수연 | [github.com/sooyeonz](https://github.com/sooyeonz) |
+| 김찬혁 | [github.com/chanhyeok0201](https://github.com/chanhyeok0201) |
 
 ---
 
