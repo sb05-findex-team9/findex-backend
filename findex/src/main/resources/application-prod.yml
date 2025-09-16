@@ -24,6 +24,9 @@ spring:
         physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
         jdbc.time_zone: UTC
 
+server:
+  port: 8080
+
 # log
 logging:
   level:
@@ -47,3 +50,4 @@ auto-sync:
 api:
   service-key: '4e45f20039574765ef0b52364e6ba488dde012627aef89847dccacb39fb77f0d'
   stock-url: 'https://apis.data.go.kr/1160100/service/GetMarketIndexInfoService/getStockMarketIndex'
+
