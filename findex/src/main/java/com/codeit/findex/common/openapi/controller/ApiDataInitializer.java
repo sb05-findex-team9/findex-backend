@@ -20,10 +20,10 @@ public class ApiDataInitializer implements CommandLineRunner {
 		System.out.println("Starting data collection...");
 
 		System.out.println("Step 1: Collecting IndexInfo data...");
-		// indexInfoService.fetchAndSaveIndexInfo();
+		indexInfoService.fetchAndSaveIndexInfo();
 
 		System.out.println("Step 2: Collecting IndexData...");
-		// indexDataService.fetchAndSaveIndexData();
+		indexDataService.fetchAndSaveIndexData();
 
 		System.out.println("All data collection complete!");
 	}
