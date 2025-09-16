@@ -24,15 +24,15 @@ spring:
         physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
         jdbc.time_zone: UTC
 
-
 # log
 logging:
   level:
-    root: INFO
+    root: DEBUG
     com.your.package: INFO
     org.hibernate.SQL: WARN
     org.hibernate.orm.jdbc.bind: WARN
     org.springframework.web: WARN
+    org.springframework.boot: DEBUG
     org.springframework.security: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
