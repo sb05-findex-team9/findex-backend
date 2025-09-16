@@ -27,13 +27,12 @@ spring:
 # log
 logging:
   level:
-    root: DEBUG
-    com.your.package: INFO
+    root: WARN
+    com.codeit.findex: INFO
     org.hibernate.SQL: WARN
-    org.hibernate.orm.jdbc.bind: WARN
-    org.springframework.web: WARN
-    org.springframework.boot: DEBUG
-    org.springframework.security: WARN
+    org.hibernate: WARN
+    com.zaxxer.hikari: WARN
+
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
